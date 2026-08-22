@@ -11,7 +11,7 @@ import { PublicLayout } from '@/layouts/public-layout';
 import { LandingPage } from '@/pages/landing-page';
 import { AboutPage, ContactPage, DoctorDetailPage, DoctorsPage, FaqPage, ServiceDetailPage, ServicesPage } from '@/pages/public-pages';
 import { AppointmentBookingPage } from '@/pages/appointment-booking-page';
-import { AppointmentRequestsPage } from '@/pages/appointment-requests-page';
+import AppointmentRequestsPage from '@/pages/appointment-requests-page';
 import '@/i18n';
 
 export default function AppRouter() {

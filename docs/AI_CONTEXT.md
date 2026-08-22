@@ -191,11 +191,10 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - `i18next` + `react-i18next` are initialized at the router root with English fallback. The
   reusable `LanguageSwitcher` persists `en`/`vi` in `localStorage` and updates without reload.
 - Locale-aware date helpers now use `en-US` or `vi-VN`. The live shell, login, dashboard, patients,
-  shared modal, and protected loading state are migrated; calendar and patient detail remain.
+  patient detail, calendar, appointment requests, shared modal, and protected loading state are migrated.
 - Date/time formatting uses `Intl.DateTimeFormat`/`toLocaleString`; the appointment request
   workflow formats dates with the active `en-US` or `vi-VN` locale.
-- This is a known gap against the project's permanent requirement to support English and
-  Vietnamese everywhere; establishing the i18n foundation is Roadmap Phase 0.
+- Public marketing/information/booking and the routed management workflows now use EN/VI resources.
 
 ## 9. Completed features (verified in code)
 
@@ -222,14 +221,18 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - Appointment request management at `/appointment-requests`, protected for admin/staff, with
   status/date/search filters, review actions, exact-phone patient reuse, explicit approval-only
   conversion through the existing appointment service, conflict detection, and audit logging.
+- Phase 4 management UX improvements: dashboard quick actions + pending-request visibility + no-show
+  summary, patient list loading/empty/error states, patient detail tabs (Overview/Appointments/Notes),
+  calendar filters (doctor/status/patient search), clearer appointment status actions, and clearer
+  appointment-request action states (pending/approved/rejected/converted).
 
 ## 10. Incomplete / not started
 
 - **Public website**: Phase 1 landing page, Phase 2 information pages, and Phase 3 appointment
   request booking are implemented.
 - **Internationalization**: i18next/react-i18next is installed with persisted EN/VI resources;
-  the public landing page is fully localized. Calendar and patient detail still have known
-  hardcoded UI strings.
+  routed public and management flows are localized, including dashboard/patients/patient detail/
+  calendar/appointment requests.
 - **Medical records** beyond free-text patient notes (structured treatment history) — not
   implemented (Roadmap Phase 5).
 - **Dental chart** — not implemented (Roadmap Phase 6).

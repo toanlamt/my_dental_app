@@ -9,110 +9,243 @@ import { EmptyState, Modal, type ModalField } from '@/components/modal';
 import { formatDate } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 
-type Patient = { id: string; full_name: string; date_of_birth: string | null; gender: string | null; phone: string | null; latest_appointment?: string | null };
+type Patient = {
+  id: string;
+  full_name: string;
+  date_of_birth: string | null;
+  gender: string | null;
+  phone: string | null;
+  latest_appointment?: string | null;
+  email?: string | null;
+  address?: string | null;
+};
 
 export function PatientsPageV2() {
-  const { user } = useAuth(); const { t } = useTranslation(); const [patients, setPatients] = useState<Patient[]>([]); const [query, setQuery] = useState(''); const search = useDebouncedValue(query); const [page, setPage] = useState(1); const [total, setTotal] = useState(0); const [open, setOpen] = useState(false); const [editing, setEditing] = useState<Patient | null>(null); const [error, setError] = useState('');
-    const fields: ModalField[] = [
-      { name: 'full_name', label: t('patients.patient'), required: true },
-      { name: 'phone', label: t('patients.phone'), type: 'tel' },
-      { name: 'email', label: 'Email', type: 'email' },
-      { name: 'date_of_birth', label: t('patients.dateOfBirth'), type: 'date' },
-      { name: 'gender', label: t('patients.gender'), type: 'select', options: [{ label: t('gender.female'), value: 'female' }, { label: t('gender.male'), value: 'male' }, { label: t('gender.other'), value: 'other' }] },
-      { name: 'address', label: 'Address' },
-    ];
-  const canEdit = user?.role === 'admin' || user?.role === 'staff'; const pageSize = 10; const pages = Math.max(1, Math.ceil(total / pageSize));
-  const load = () => apiRequest<{ patients: Patient[]; total: number }>(`/api/patients?page=${page}&pageSize=${pageSize}&query=${encodeURIComponent(search)}`).then((result) => { setPatients(result.patients); setTotal(result.total); }).catch((err) => setError(err instanceof Error ? err.message : t('patients.unableToLoad')));
-  useEffect(() => { setPage(1); }, [search]); useEffect(() => { load(); }, [search, page]);
-  const save = async (values: Record<string, string>) => { setError(''); try { await apiRequest(editing ? `/api/patients/${editing.id}` : '/api/patients', { method: editing ? 'PATCH' : 'POST', body: JSON.stringify(values) }); setOpen(false); setEditing(null); load(); } catch (err) { setError(err instanceof Error ? err.message : t('patients.unableToSave')); } };
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-medium text-primary">{t('patients.directory')}</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight">{t('patients.title')}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{t('patients.description')}</p>
-          </div>
-          {canEdit && (
-            <Button onClick={() => { setEditing(null); setOpen(true); }}>
-              <Plus size={16} />{t('patients.add')}
-            </Button>
-          )}
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [query, setQuery] = useState('');
+  const search = useDebouncedValue(query);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Patient | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const fields: ModalField[] = [
+    { name: 'full_name', label: t('patients.patient'), required: true },
+    { name: 'phone', label: t('patients.phone'), type: 'tel' },
+    { name: 'email', label: t('common.email'), type: 'email' },
+    { name: 'date_of_birth', label: t('patients.dateOfBirth'), type: 'date' },
+    {
+      name: 'gender',
+      label: t('patients.gender'),
+      type: 'select',
+      options: [
+        { label: t('gender.female'), value: 'female' },
+        { label: t('gender.male'), value: 'male' },
+        { label: t('gender.other'), value: 'other' },
+      ],
+    },
+    { name: 'address', label: t('common.address') },
+  ];
+
+  const canEdit = user?.role === 'admin' || user?.role === 'staff';
+  const pageSize = 10;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+
+  const load = () => {
+    setLoading(true);
+    setError('');
+    apiRequest<{ patients: Patient[]; total: number }>(
+      `/api/patients?page=${page}&pageSize=${pageSize}&query=${encodeURIComponent(search)}`,
+    )
+      .then((result) => {
+        setPatients(result.patients);
+        setTotal(result.total);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : t('patients.unableToLoad')))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, page]);
+
+  const save = async (values: Record<string, string>) => {
+    setError('');
+    try {
+      await apiRequest(editing ? `/api/patients/${editing.id}` : '/api/patients', {
+        method: editing ? 'PATCH' : 'POST',
+        body: JSON.stringify(values),
+      });
+      setOpen(false);
+      setEditing(null);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('patients.unableToSave'));
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-medium text-primary">{t('patients.directory')}</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{t('patients.title')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('patients.description')}</p>
         </div>
-        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        <Card>
-          <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle>{t('patients.directoryTitle')}</CardTitle>
-              <CardDescription>{t('patients.total', { count: total })}</CardDescription>
-            </div>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-              <Input className="pl-9" placeholder={t('patients.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {patients.length === 0 ? (
-              <EmptyState title={t('patients.noFound')} description={t('patients.tryAgain')} />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                      <th className="pb-3">{t('patients.patient')}</th>
-                      <th className="pb-3">{t('patients.phone')}</th>
-                      <th className="pb-3">{t('patients.dateOfBirth')}</th>
-                      <th className="pb-3">{t('patients.gender')}</th>
-                      <th className="pb-3">{t('patients.latestAppointment')}</th>
-                      <th className="pb-3 text-right">{t('patients.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {patients.map((patient) => (
-                      <tr key={patient.id}>
-                        <td className="py-4 font-medium">
-                          <Link className="hover:text-primary" to={`/patients/${patient.id}`}>
-                            {patient.full_name}
-                          </Link>
-                        </td>
-                        <td className="py-4 text-muted-foreground">{patient.phone ?? t('common.notProvided')}</td>
-                        <td className="py-4">{formatDate(patient.date_of_birth)}</td>
-                        <td className="py-4">
-                          <Badge variant="muted">{patient.gender ? t(`gender.${patient.gender}`, { defaultValue: patient.gender }) : t('common.notProvided')}</Badge>
-                        </td>
-                        <td className="py-4 text-muted-foreground">{formatDate(patient.latest_appointment)}</td>
-                        <td className="py-4">
-                          <div className="flex justify-end gap-1">
-                            <Link to={`/patients/${patient.id}`} aria-label={t('patients.view', { name: patient.full_name })} className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent">
-                              <Eye size={16} />
-                            </Link>
-                            {canEdit && (
-                              <Button variant="ghost" size="icon" onClick={() => { setEditing(patient); setOpen(true); }} aria-label={t('patients.edit', { name: patient.full_name })}>
-                                <Edit3 size={16} />
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="mt-5 flex items-center justify-between border-t pt-4">
-              <p className="text-xs text-muted-foreground">{t('patients.page', { page, pages })}</p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label={t('patients.previous')}>
-                  <ChevronLeft size={16} />
-                </Button>
-                <Button variant="outline" size="icon" disabled={page >= pages} onClick={() => setPage(page + 1)} aria-label={t('patients.next')}>
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Modal title={editing ? t('patients.edit') : t('patients.add')} description={t('patients.formDescription')} fields={fields} initialValues={editing ? { full_name: editing.full_name, phone: editing.phone ?? '', date_of_birth: editing.date_of_birth ?? '', gender: editing.gender ?? '' } : undefined} open={open} onOpenChange={setOpen} onSubmit={save} submitLabel={editing ? t('patients.saveChanges') : t('patients.create')} />
+        {canEdit && (
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus size={16} />
+            {t('patients.add')}
+          </Button>
+        )}
       </div>
-    );
+
+      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      <Card>
+        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>{t('patients.directoryTitle')}</CardTitle>
+            <CardDescription>{t('patients.total', { count: total })}</CardDescription>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <Input
+              className="pl-9"
+              placeholder={t('patients.search')}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="py-8 text-sm text-muted-foreground">{t('common.loading')}</p>
+          ) : patients.length === 0 ? (
+            <EmptyState title={t('patients.noFound')} description={t('patients.tryAgain')} />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="pb-3">{t('patients.patient')}</th>
+                    <th className="pb-3">{t('patients.phone')}</th>
+                    <th className="pb-3">{t('patients.dateOfBirth')}</th>
+                    <th className="pb-3">{t('patients.gender')}</th>
+                    <th className="pb-3">{t('patients.latestAppointment')}</th>
+                    <th className="pb-3 text-right">{t('patients.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {patients.map((patient) => (
+                    <tr key={patient.id}>
+                      <td className="py-4 font-medium">
+                        <Link className="hover:text-primary" to={`/patients/${patient.id}`}>
+                          {patient.full_name}
+                        </Link>
+                      </td>
+                      <td className="py-4 text-muted-foreground">{patient.phone ?? t('common.notProvided')}</td>
+                      <td className="py-4">{formatDate(patient.date_of_birth)}</td>
+                      <td className="py-4">
+                        <Badge variant="muted">
+                          {patient.gender
+                            ? t(`gender.${patient.gender}`, { defaultValue: patient.gender })
+                            : t('common.notProvided')}
+                        </Badge>
+                      </td>
+                      <td className="py-4 text-muted-foreground">{formatDate(patient.latest_appointment)}</td>
+                      <td className="py-4">
+                        <div className="flex justify-end gap-1">
+                          <Link
+                            to={`/patients/${patient.id}`}
+                            aria-label={t('patients.view', { name: patient.full_name })}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+                          >
+                            <Eye size={16} />
+                          </Link>
+                          {canEdit && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditing(patient);
+                                setOpen(true);
+                              }}
+                              aria-label={t('patients.edit', { name: patient.full_name })}
+                            >
+                              <Edit3 size={16} />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-5 flex items-center justify-between border-t pt-4">
+            <p className="text-xs text-muted-foreground">{t('patients.page', { page, pages })}</p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage(page - 1)}
+                aria-label={t('patients.previous')}
+              >
+                <ChevronLeft size={16} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={page >= pages || loading}
+                onClick={() => setPage(page + 1)}
+                aria-label={t('patients.next')}
+              >
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Modal
+        title={editing ? t('patients.edit') : t('patients.add')}
+        description={t('patients.formDescription')}
+        fields={fields}
+        initialValues={
+          editing
+            ? {
+                full_name: editing.full_name,
+                phone: editing.phone ?? '',
+                email: editing.email ?? '',
+                date_of_birth: editing.date_of_birth ?? '',
+                gender: editing.gender ?? '',
+                address: editing.address ?? '',
+              }
+            : undefined
+        }
+        open={open}
+        onOpenChange={setOpen}
+        onSubmit={save}
+        submitLabel={editing ? t('patients.saveChanges') : t('patients.create')}
+      />
+    </div>
+  );
 }

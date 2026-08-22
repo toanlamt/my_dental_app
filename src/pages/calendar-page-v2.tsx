@@ -1,23 +1,338 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { apiRequest, useAuth } from '@/lib/auth-context';
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/primitives';
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
-import { Modal, type ModalField } from '@/components/modal';
+import { EmptyState, Modal, type ModalField } from '@/components/modal';
+import { formatDateTime } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
-type Appointment = { id: string; patient_id: string; doctor_id: string; start_at: string; end_at: string; status: string; reason: string | null; notes: string | null };
+type Appointment = {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  start_at: string;
+  end_at: string;
+  status: string;
+  reason: string | null;
+  notes: string | null;
+};
+
 type Person = { id: string; full_name?: string; name?: string };
-const fields = (patients: Person[], doctors: Person[]): ModalField[] => [{ name: 'patient_id', label: 'Patient', type: 'select', required: true, options: patients.map((item) => ({ label: item.full_name ?? 'Patient', value: item.id })) }, { name: 'doctor_id', label: 'Doctor', type: 'select', required: true, options: doctors.map((item) => ({ label: item.full_name ?? item.name ?? 'Doctor', value: item.id })) }, { name: 'start_at', label: 'Start time', type: 'datetime-local', required: true }, { name: 'end_at', label: 'End time', type: 'datetime-local', required: true }, { name: 'reason', label: 'Reason' }, { name: 'notes', label: 'Notes', type: 'textarea' }];
-const variant = (status: string) => status === 'completed' ? 'success' as const : status === 'cancelled' ? 'danger' as const : status === 'no_show' ? 'warning' as const : 'default' as const;
+
+const fields = (
+  patients: Person[],
+  doctors: Person[],
+  t: (key: string, options?: Record<string, unknown>) => string,
+): ModalField[] => [
+  {
+    name: 'patient_id',
+    label: t('appointments.patient'),
+    type: 'select',
+    required: true,
+    options: patients.map((item) => ({ label: item.full_name ?? t('appointments.patient'), value: item.id })),
+  },
+  {
+    name: 'doctor_id',
+    label: t('appointments.doctor'),
+    type: 'select',
+    required: true,
+    options: doctors.map((item) => ({ label: item.full_name ?? item.name ?? t('appointments.doctor'), value: item.id })),
+  },
+  { name: 'start_at', label: t('appointments.start'), type: 'datetime-local', required: true },
+  { name: 'end_at', label: t('appointments.end'), type: 'datetime-local', required: true },
+  { name: 'reason', label: t('appointments.reason') },
+  { name: 'notes', label: t('appointments.notes'), type: 'textarea' },
+];
+
+const statusVariant = (status: string) => {
+  if (status === 'completed') return 'success' as const;
+  if (status === 'cancelled') return 'danger' as const;
+  if (status === 'no_show') return 'warning' as const;
+  return 'default' as const;
+};
+
+const allStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show'] as const;
 
 export function CalendarPageV2() {
-  const { user } = useAuth(); const [date, setDate] = useState(new Date()); const [mode, setMode] = useState<'day' | 'week'>('day'); const [appointments, setAppointments] = useState<Appointment[]>([]); const [patients, setPatients] = useState<Person[]>([]); const [doctors, setDoctors] = useState<Person[]>([]); const [open, setOpen] = useState(false); const [selected, setSelected] = useState<Appointment | null>(null); const [error, setError] = useState(''); const canSchedule = user?.role === 'admin' || user?.role === 'staff';
-  const range = useMemo(() => { const start = new Date(date); start.setHours(0, 0, 0, 0); if (mode === 'week') start.setDate(start.getDate() - start.getDay()); const end = new Date(start); end.setDate(end.getDate() + (mode === 'week' ? 7 : 1)); return { start, end }; }, [date, mode]);
-  const load = () => apiRequest<{ appointments: Appointment[] }>(`/api/calendar?from=${encodeURIComponent(range.start.toISOString())}&to=${encodeURIComponent(range.end.toISOString())}`).then((result) => setAppointments(result.appointments)).catch((err) => setError(err instanceof Error ? err.message : 'Unable to load calendar'));
-  useEffect(() => { load(); }, [range.start.toISOString(), range.end.toISOString()]); useEffect(() => { Promise.all([apiRequest<{ patients: Person[] }>('/api/patients?pageSize=100'), apiRequest<{ doctors: Person[] }>('/api/doctors')]).then(([p, d]) => { setPatients(p.patients); setDoctors(d.doctors); }); }, []);
-  const patientName = (id: string) => patients.find((item) => item.id === id)?.full_name ?? 'Patient'; const doctorName = (id: string) => doctors.find((item) => item.id === id)?.full_name ?? doctors.find((item) => item.id === id)?.name ?? 'Doctor';
-  const create = async (values: Record<string, string>) => { setError(''); const start = new Date(values.start_at); const end = new Date(values.end_at); if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) { setError('End time must be after the start time.'); return; } try { await apiRequest('/api/appointments', { method: 'POST', body: JSON.stringify({ ...values, start_at: start.toISOString(), end_at: end.toISOString() }) }); setOpen(false); load(); } catch (err) { setError(err instanceof Error ? err.message : 'Unable to create appointment'); } };
-  const updateStatus = async (status: string) => { if (!selected) return; await apiRequest(`/api/appointments/${selected.id}`, { method: 'PATCH', body: JSON.stringify({ status }) }); setSelected(null); load(); };
-  const move = (amount: number) => setDate((current) => { const next = new Date(current); next.setDate(next.getDate() + amount * (mode === 'week' ? 7 : 1)); return next; });
-  return <div className="space-y-6"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-medium text-primary">Planning</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Calendar</h1><p className="mt-2 text-sm text-muted-foreground">Review the day or week and keep every visit moving.</p></div>{canSchedule && <Button onClick={() => setOpen(true)}><Plus size={16} />Schedule appointment</Button>}</div>{error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}<Card><CardHeader className="flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>{mode === 'day' ? range.start.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) : `${range.start.toLocaleDateString([], { month: 'short', day: 'numeric' })} - ${new Date(range.end.getTime() - 1).toLocaleDateString([], { month: 'short', day: 'numeric' })}`}</CardTitle><CardDescription>{appointments.length} appointments in view</CardDescription></div><div className="flex flex-wrap items-center gap-2"><div className="flex rounded-md border p-1"><Button variant={mode === 'day' ? 'default' : 'ghost'} size="sm" onClick={() => setMode('day')}>Day</Button><Button variant={mode === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setMode('week')}>Week</Button></div><Button variant="outline" size="icon" onClick={() => move(-1)} aria-label="Previous period"><ChevronLeft size={16} /></Button><Button variant="outline" size="sm" onClick={() => setDate(new Date())}>Today</Button><Button variant="outline" size="icon" onClick={() => move(1)} aria-label="Next period"><ChevronRight size={16} /></Button></div></CardHeader><CardContent><div className="space-y-3">{appointments.length === 0 ? <div className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed bg-slate-50 text-center"><CalendarDays className="text-muted-foreground" size={28} /><p className="mt-3 font-medium">No appointments in this view</p><p className="mt-1 text-sm text-muted-foreground">Create one from the schedule button.</p></div> : appointments.map((appointment) => <button key={appointment.id} onClick={() => setSelected(appointment)} className="flex w-full flex-col gap-3 rounded-md border p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/[.03] sm:flex-row sm:items-center"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Clock3 size={18} /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{patientName(appointment.patient_id)}</span><Badge variant={variant(appointment.status)}>{appointment.status.replace('_', ' ')}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{new Date(appointment.start_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} - {new Date(appointment.end_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {doctorName(appointment.doctor_id)}</p><p className="mt-1 text-xs text-muted-foreground">{appointment.reason ?? 'Routine visit'}</p></div></button>)}</div></CardContent></Card><Modal title="Schedule appointment" description="The server will prevent overlapping appointments for the same doctor." fields={fields(patients, doctors)} open={open} onOpenChange={setOpen} onSubmit={create} submitLabel="Create appointment" />{selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4" onMouseDown={() => setSelected(null)}><Card className="w-full max-w-md" onMouseDown={(event) => event.stopPropagation()}><CardHeader className="flex-row items-start justify-between"><div><CardTitle>{patientName(selected.patient_id)}</CardTitle><CardDescription>{doctorName(selected.doctor_id)}</CardDescription></div><Button variant="ghost" size="icon" onClick={() => setSelected(null)} aria-label="Close appointment details"><X size={17} /></Button></CardHeader><CardContent className="space-y-4"><div className="rounded-md bg-slate-50 p-3 text-sm">{new Date(selected.start_at).toLocaleString()} - {new Date(selected.end_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}<br />{selected.reason ?? 'Routine visit'}{selected.notes && <><br />{selected.notes}</>}</div>{user?.role !== 'doctor' || selected.doctor_id === user.id ? <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => updateStatus('confirmed')}>Confirm</Button><Button size="sm" variant="outline" onClick={() => updateStatus('completed')}>Complete</Button><Button size="sm" variant="outline" onClick={() => updateStatus('no_show')}>No-show</Button><Button size="sm" variant="danger" onClick={() => updateStatus('cancelled')}>Cancel</Button></div> : null}</CardContent></Card></div>}</div>;
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const [date, setDate] = useState(new Date());
+  const [mode, setMode] = useState<'day' | 'week'>('day');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [patients, setPatients] = useState<Person[]>([]);
+  const [doctors, setDoctors] = useState<Person[]>([]);
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Appointment | null>(null);
+  const [doctorFilter, setDoctorFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [patientQuery, setPatientQuery] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const canSchedule = user?.role === 'admin' || user?.role === 'staff';
+
+  const range = useMemo(() => {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    if (mode === 'week') start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(end.getDate() + (mode === 'week' ? 7 : 1));
+    return { start, end };
+  }, [date, mode]);
+
+  const load = () => {
+    setLoading(true);
+    setError('');
+    const query = new URLSearchParams({
+      from: range.start.toISOString(),
+      to: range.end.toISOString(),
+    });
+
+    if (user?.role !== 'doctor' && doctorFilter) query.set('doctorId', doctorFilter);
+    if (statusFilter) query.set('status', statusFilter);
+
+    apiRequest<{ appointments: Appointment[] }>(`/api/appointments?${query.toString()}`)
+      .then((result) => setAppointments(result.appointments))
+      .catch((err) => setError(err instanceof Error ? err.message : t('appointments.unableToLoad')))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range.start.toISOString(), range.end.toISOString(), doctorFilter, statusFilter, user?.role]);
+
+  useEffect(() => {
+    Promise.all([
+      apiRequest<{ patients: Person[] }>('/api/patients?pageSize=100'),
+      apiRequest<{ doctors: Person[] }>('/api/doctors'),
+    ]).then(([p, d]) => {
+      setPatients(p.patients);
+      setDoctors(d.doctors);
+    }).catch(() => undefined);
+  }, []);
+
+  const patientName = (id: string) => patients.find((item) => item.id === id)?.full_name ?? t('appointments.patient');
+  const doctorName = (id: string) => doctors.find((item) => item.id === id)?.full_name ?? doctors.find((item) => item.id === id)?.name ?? t('appointments.doctor');
+
+  const filteredAppointments = appointments.filter((appointment) => {
+    if (!patientQuery.trim()) return true;
+    return patientName(appointment.patient_id).toLowerCase().includes(patientQuery.toLowerCase());
+  });
+
+  const create = async (values: Record<string, string>) => {
+    setError('');
+    const start = new Date(values.start_at);
+    const end = new Date(values.end_at);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      setError(t('appointments.endAfterStart'));
+      return;
+    }
+
+    try {
+      await apiRequest('/api/appointments', {
+        method: 'POST',
+        body: JSON.stringify({ ...values, start_at: start.toISOString(), end_at: end.toISOString() }),
+      });
+      setOpen(false);
+      load();
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('Doctor already has an appointment')) {
+        setError(t('appointmentRequests.conflict'));
+        return;
+      }
+      setError(err instanceof Error ? err.message : t('appointments.unableToCreate'));
+    }
+  };
+
+  const updateStatus = async (status: string) => {
+    if (!selected) return;
+    if (status === 'cancelled' && !window.confirm(t('appointmentRequests.rejectConfirm'))) return;
+    setError('');
+    try {
+      await apiRequest(`/api/appointments/${selected.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      setSelected(null);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('errors.requestFailed'));
+    }
+  };
+
+  const move = (amount: number) =>
+    setDate((current) => {
+      const next = new Date(current);
+      next.setDate(next.getDate() + amount * (mode === 'week' ? 7 : 1));
+      return next;
+    });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-medium text-primary">{t('dashboard.overview')}</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{t('navigation.calendar')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('dashboard.openCalendar')}</p>
+        </div>
+        {canSchedule && (
+          <Button onClick={() => setOpen(true)}>
+            <Plus size={16} />
+            {t('appointments.schedule')}
+          </Button>
+        )}
+      </div>
+
+      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      <Card>
+        <CardHeader className="flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>
+              {mode === 'day'
+                ? range.start.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+                : `${range.start.toLocaleDateString([], { month: 'short', day: 'numeric' })} - ${new Date(range.end.getTime() - 1).toLocaleDateString([], { month: 'short', day: 'numeric' })}`}
+            </CardTitle>
+            <CardDescription>{t('appointments.inView', { count: filteredAppointments.length })}</CardDescription>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-md border p-1">
+              <Button variant={mode === 'day' ? 'default' : 'ghost'} size="sm" onClick={() => setMode('day')}>
+                {t('appointments.day')}
+              </Button>
+              <Button variant={mode === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setMode('week')}>
+                {t('appointments.week')}
+              </Button>
+            </div>
+            <Button variant="outline" size="icon" onClick={() => move(-1)} aria-label={t('appointments.previous')}>
+              <ChevronLeft size={16} />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setDate(new Date())}>
+              {t('appointments.today')}
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => move(1)} aria-label={t('appointments.next')}>
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {user?.role !== 'doctor' && (
+              <div>
+                <Label htmlFor="doctor-filter">{t('appointments.doctor')}</Label>
+                <select
+                  id="doctor-filter"
+                  className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={doctorFilter}
+                  onChange={(event) => setDoctorFilter(event.target.value)}
+                >
+                  <option value="">{t('appointmentRequests.allStatuses')}</option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.id} value={doctor.id}>{doctor.full_name ?? doctor.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="status-filter">{t('appointmentRequests.filterStatus')}</Label>
+              <select
+                id="status-filter"
+                className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="">{t('appointmentRequests.allStatuses')}</option>
+                {allStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {t(`appointments.status.${status}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <Label htmlFor="patient-filter">{t('patients.search')}</Label>
+              <Input
+                id="patient-filter"
+                className="mt-1"
+                value={patientQuery}
+                onChange={(event) => setPatientQuery(event.target.value)}
+                placeholder={t('patients.search')}
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <p className="py-8 text-sm text-muted-foreground">{t('common.loading')}</p>
+          ) : filteredAppointments.length === 0 ? (
+            <EmptyState title={t('appointments.noAppointments')} description={t('appointments.noAppointmentsDescription')} />
+          ) : (
+            <div className="space-y-3">
+              {filteredAppointments.map((appointment) => (
+                <button
+                  type="button"
+                  key={appointment.id}
+                  className="flex w-full items-center justify-between gap-3 rounded-md border p-3 text-left transition hover:bg-slate-50"
+                  onClick={() => setSelected(appointment)}
+                >
+                  <div>
+                    <p className="font-medium">{patientName(appointment.patient_id)}</p>
+                    <p className="text-sm text-muted-foreground">{formatDateTime(appointment.start_at)}</p>
+                    <p className="text-xs text-muted-foreground">{doctorName(appointment.doctor_id)}</p>
+                    <p className="text-xs text-muted-foreground">{appointment.reason ?? t('common.notProvided')}</p>
+                  </div>
+                  <Badge variant={statusVariant(appointment.status)}>
+                    {t(`appointments.status.${appointment.status}`, { defaultValue: appointment.status.replace('_', ' ') })}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {selected && (
+        <Card>
+          <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle>{patientName(selected.patient_id)}</CardTitle>
+              <CardDescription>{formatDateTime(selected.start_at)}</CardDescription>
+            </div>
+            <Badge variant={statusVariant(selected.status)}>
+              {t(`appointments.status.${selected.status}`, { defaultValue: selected.status.replace('_', ' ') })}
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">{doctorName(selected.doctor_id)}</p>
+            <p className="text-sm">{selected.reason ?? t('common.notProvided')}</p>
+            <div className="flex flex-wrap gap-2">
+              {['confirmed', 'completed', 'no_show', 'cancelled'].map((status) => (
+                <Button key={status} size="sm" variant={status === 'cancelled' ? 'danger' : 'outline'} onClick={() => updateStatus(status)}>
+                  {t(`appointments.status.${status}`)}
+                </Button>
+              ))}
+              <Button size="sm" variant="ghost" onClick={() => setSelected(null)}>
+                {t('navigation.close')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Modal
+        title={t('appointments.schedule')}
+        fields={fields(patients, doctors, t)}
+        open={open}
+        onOpenChange={setOpen}
+        onSubmit={create}
+        submitLabel={t('common.create')}
+      />
+    </div>
+  );
 }

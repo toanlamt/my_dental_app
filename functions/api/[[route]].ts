@@ -266,7 +266,10 @@ app.get('/dashboard', requireAuth, async (c) => {
   const doctorId = user.role === 'doctor' ? user.id : undefined;
   const appointments = await appointmentService.listAppointments(c.env.DB, { from: dayStart.toISOString(), to: dayEnd.toISOString(), doctorId });
   const upcoming = await appointmentService.listAppointments(c.env.DB, { from: now.toISOString(), doctorId });
-  return c.json({ summary: { today: appointments.length, confirmed: appointments.filter((item) => item.status === 'confirmed').length, completed: appointments.filter((item) => item.status === 'completed').length, cancelled: appointments.filter((item) => item.status === 'cancelled').length }, today: appointments, upcoming: upcoming.filter((item) => item.status !== 'cancelled').slice(0, 8) });
+  const pendingRequests = user.role === 'doctor'
+    ? 0
+    : ((await c.env.DB.prepare("SELECT COUNT(*) as count FROM appointment_requests WHERE status = 'pending'").first<{ count: number }>())?.count ?? 0);
+  return c.json({ summary: { today: appointments.length, confirmed: appointments.filter((item) => item.status === 'confirmed').length, completed: appointments.filter((item) => item.status === 'completed').length, cancelled: appointments.filter((item) => item.status === 'cancelled').length, no_show: appointments.filter((item) => item.status === 'no_show').length, pending_requests: pendingRequests }, today: appointments, upcoming: upcoming.filter((item) => item.status !== 'cancelled').slice(0, 8) });
 });
 // ---------------------------------------------------------------------------
 // Appointments

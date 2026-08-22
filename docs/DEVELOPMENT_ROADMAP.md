@@ -79,11 +79,12 @@ pass and the feature actually works), not merely implemented. See
 - **Acceptance criteria**: Defined per concrete improvement task when picked up; must not
   regress existing behavior; build/typecheck/lint pass.
 - **Isolation requirements**: Must preserve all currently working management-system behavior.
-- **Status**: `IN PROGRESS` — the base management system (auth, dashboard, patients CRUD +
-  search, calendar/appointments with conflict detection, audit logging) is already implemented
-  and functional. Known cleanup item: duplicate page implementations exist for every screen
-  (`*-page.tsx` vs `*-page-v2.tsx`); only the `-v2` versions are routed, and the default Vite
-  starter (`App.tsx`/`App.css` + unused sample assets) is dead code — see `docs/AI_CONTEXT.md` §2/§11.
+- **Status**: `IN PROGRESS` — core Phase 4 usability workflow improvements are implemented:
+  dashboard operational overview (including pending requests/no-show count and quick actions),
+  patient list/search/loading-empty-error behavior, patient detail tabbed UX, calendar day/week
+  usability with doctor/status/patient filters and status actions, and clearer appointment
+  request action states. Verification commands are still blocked in this environment because
+  npm is unavailable in both Windows PowerShell and WSL, so this phase is not yet marked `DONE`.
 
 ## Phase 5 — Medical records
 - **Objective**: Structured medical/treatment history beyond free-text notes.
