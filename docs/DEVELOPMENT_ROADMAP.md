@@ -51,7 +51,11 @@ pass and the feature actually works), not merely implemented. See
 - **Acceptance criteria**: All listed pages exist as routes, are reachable without auth, and
   are localized; build/typecheck/lint pass.
 - **Isolation requirements**: Independent of management-system routes and of booking (Phase 3).
-- **Status**: `PLANNED` — none of these pages exist yet.
+- **Status**: `IN PROGRESS` — static bilingual services, service detail, about, doctors, doctor
+  detail, FAQ, and contact pages are implemented with route-aware navigation, metadata,
+  breadcrumbs, and invalid-slug states. Build/typecheck/lint/manual browser verification remain
+  blocked because `npm` is unavailable in Windows PowerShell and Ubuntu WSL on 2026-08-22; do
+  not mark `DONE` until those checks run successfully.
 
 ## Phase 3 — Public appointment booking
 - **Objective**: Allow a visitor to request/book an appointment without logging in.

@@ -64,7 +64,8 @@ migrations/
 
 src/
   main.tsx               Entry point — renders AppRouter (NOT App.tsx).
-  AppRouter.tsx           All frontend routes (see §4). Only imports the "-v2" page components.
+  AppRouter.tsx           All frontend routes (see §4). Imports public information pages and the
+                           "-v2" management page components.
   App.tsx / App.css       Default Vite/React starter template (counter demo). NOT referenced by
                            main.tsx or AppRouter — dead code left over from project scaffolding.
   lib/
@@ -110,6 +111,13 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
 | Path              | Component                    | Protected |
 |-------------------|-------------------------------|-----------|
 | `/`               | `LandingPage` via `PublicLayout` | No |
+| `/services`       | `ServicesPage` via `PublicLayout` | No |
+| `/services/:slug` | `ServiceDetailPage` via `PublicLayout` | No |
+| `/about`          | `AboutPage` via `PublicLayout` | No |
+| `/doctors`        | `DoctorsPage` via `PublicLayout` | No |
+| `/doctors/:slug`  | `DoctorDetailPage` via `PublicLayout` | No |
+| `/faq`            | `FaqPage` via `PublicLayout` | No |
+| `/contact`        | `ContactPage` via `PublicLayout` | No |
 | `/login`          | `LoginPage`                   | No |
 | `/dashboard`      | `DashboardPageV2`              | Yes |
 | `/patients`       | `PatientsPageV2`                | Yes |
@@ -117,9 +125,11 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
 | `/calendar`       | `CalendarPageV2`                | Yes |
 | `*`               | redirect to `/`                | — |
 
-The Phase 1 public landing page is static and does not call the backend. `PublicLayout` owns the
-public header/footer and localized navigation. Future `/services`, `/about`, and `/book` links
-fall through the SPA fallback until their later phases. Internal routes remain protected.
+The Phase 1 landing page and Phase 2 public information pages are static and do not call the
+backend. `PublicLayout` owns the public header/footer, responsive mobile navigation, and
+localized navigation. Public records and localized copy live in `src/data/public-data.ts` and
+`src/i18n/locales/{en,vi}/public-pages.ts`. `/book` remains a future-phase link and falls
+through to the home redirect. Internal routes remain protected.
 
 ## 5. Backend API (`functions/api/[[route]].ts`, all under `/api`)
 
@@ -204,11 +214,14 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - Basic responsive app shell (collapsible sidebar nav) for the management system.
 - Public Phase 1 landing page with static marketing data, responsive public layout, EN/VI copy,
   visuals, benefits, services, doctors, FAQ, testimonials, CTA, clinic information, and footer.
+- Public Phase 2 information pages for services and service details, about, doctors and doctor
+  details, FAQ accordion, and contact/map placeholder. These use static bilingual content,
+  translated metadata, breadcrumbs, translated invalid-slug states, and no backend dependencies.
 
 ## 10. Incomplete / not started
 
-- **Public website**: Phase 1 landing page is implemented; services, about, doctors, FAQ,
-  contact detail pages, and public appointment booking remain later phases.
+- **Public website**: Phase 1 landing page and Phase 2 services, about, doctors, FAQ, and contact
+  pages are implemented; public appointment booking remains a later phase.
 - **Internationalization**: i18next/react-i18next is installed with persisted EN/VI resources;
   the public landing page is fully localized. Calendar and patient detail still have known
   hardcoded UI strings.
