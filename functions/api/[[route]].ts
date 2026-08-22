@@ -10,14 +10,18 @@ import {
   createNoteSchema,
   createUserSchema,
   createAppointmentSchema,
+  createAppointmentRequestSchema,
+  reviewAppointmentRequestSchema,
+  convertAppointmentRequestSchema,
   updateAppointmentSchema,
   parseJsonBody,
 } from '../lib/validation';
-import { toPublicUser, type AppointmentStatus } from '../lib/types';
+import { toPublicUser, type AppointmentStatus, type AppointmentRequestStatus } from '../lib/types';
 import * as userService from '../services/user.service';
 import * as patientService from '../services/patient.service';
 import * as appointmentService from '../services/appointment.service';
 import * as notificationService from '../services/notification.service';
+import * as appointmentRequestService from '../services/appointment-request.service';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>().basePath('/api');
 
@@ -85,6 +89,89 @@ app.post('/users', requireAuth, requireRole('admin'), async (c) => {
 app.get('/doctors', requireAuth, async (c) => {
   const doctors = await userService.listDoctors(c.env.DB);
   return c.json({ doctors });
+});
+
+// ---------------------------------------------------------------------------
+// Public appointment requests
+// ---------------------------------------------------------------------------
+
+app.get('/public/doctors', async (c) => {
+  return c.json({ doctors: await userService.listPublicDoctors(c.env.DB) });
+});
+
+app.post('/public/appointment-requests', async (c) => {
+  const parsed = await parseJsonBody(c, createAppointmentRequestSchema);
+  if (parsed instanceof Response) return parsed;
+
+  if (parsed.preferred_date < new Date().toISOString().slice(0, 10)) {
+    return c.json({ error: 'Preferred date cannot be in the past' }, 400);
+  }
+  if (parsed.doctor_id) {
+    const doctor = await userService.findUserById(c.env.DB, parsed.doctor_id);
+    if (!doctor || doctor.role !== 'doctor' || !doctor.is_active) return c.json({ error: 'Invalid doctor' }, 400);
+  }
+  try {
+    const request = await appointmentRequestService.createAppointmentRequest(c.env.DB, parsed);
+    await logAudit(c.env.DB, { userId: null, action: 'appointment_request.created', entityType: 'appointment_request', entityId: request.id });
+    return c.json({ request: { id: request.id, status: request.status, created_at: request.created_at } }, 201);
+  } catch (err) {
+    if (err instanceof Error && err.message === 'DUPLICATE_REQUEST') return c.json({ error: 'A similar request was recently received' }, 429);
+    throw err;
+  }
+});
+
+app.get('/appointment-requests', requireAuth, requireRole('admin', 'staff'), async (c) => {
+  const status = c.req.query('status') as AppointmentRequestStatus | undefined;
+  const requests = await appointmentRequestService.listAppointmentRequests(c.env.DB, {
+    status: ['pending', 'approved', 'rejected', 'converted'].includes(status ?? '') ? status : undefined,
+    date: c.req.query('date') || undefined,
+    query: c.req.query('query') || undefined,
+  });
+  return c.json({ requests });
+});
+
+app.get('/appointment-requests/:id', requireAuth, requireRole('admin', 'staff'), async (c) => {
+  const request = await appointmentRequestService.getAppointmentRequestById(c.env.DB, c.req.param('id'));
+  if (!request) return c.json({ error: 'Appointment request not found' }, 404);
+  return c.json({ request });
+});
+
+app.patch('/appointment-requests/:id', requireAuth, requireRole('admin', 'staff'), async (c) => {
+  const parsed = await parseJsonBody(c, reviewAppointmentRequestSchema);
+  if (parsed instanceof Response) return parsed;
+  const user = c.get('user');
+  const request = await appointmentRequestService.reviewAppointmentRequest(c.env.DB, c.req.param('id'), parsed.status, user.id, parsed.rejection_reason);
+  if (!request) return c.json({ error: 'Appointment request cannot be reviewed' }, 409);
+  await logAudit(c.env.DB, { userId: user.id, action: `appointment_request.${parsed.status}`, entityType: 'appointment_request', entityId: request.id });
+  return c.json({ request });
+});
+
+app.post('/appointment-requests/:id/convert', requireAuth, requireRole('admin', 'staff'), async (c) => {
+  const parsed = await parseJsonBody(c, convertAppointmentRequestSchema);
+  if (parsed instanceof Response) return parsed;
+  const user = c.get('user');
+  const request = await appointmentRequestService.getAppointmentRequestById(c.env.DB, c.req.param('id'));
+  if (!request || request.status !== 'approved') return c.json({ error: 'Only approved requests can be converted' }, 409);
+  const doctorId = parsed.doctor_id ?? request.doctor_id;
+  if (!doctorId) return c.json({ error: 'A doctor is required before conversion' }, 400);
+  const doctor = await userService.findUserById(c.env.DB, doctorId);
+  if (!doctor || doctor.role !== 'doctor' || !doctor.is_active) return c.json({ error: 'Invalid doctor' }, 400);
+
+  let patient = parsed.patient_id ? await patientService.getPatientById(c.env.DB, parsed.patient_id) : await patientService.findPatientByPhone(c.env.DB, request.phone);
+  if (parsed.patient_id && !patient) return c.json({ error: 'Patient not found' }, 404);
+  if (!patient) patient = await patientService.createPatient(c.env.DB, { full_name: request.full_name, phone: request.phone, email: request.email });
+  const startAt = `${request.preferred_date}T${request.preferred_time}:00.000Z`;
+  const endAt = new Date(Date.parse(startAt) + 30 * 60 * 1000).toISOString();
+  try {
+    const appointment = await appointmentService.createAppointment(c.env.DB, { patientId: patient.id, doctorId, startTime: startAt, endTime: endAt, reason: request.service_slug ?? request.message, createdBy: user.id });
+    const converted = await appointmentRequestService.markAppointmentRequestConverted(c.env.DB, request.id, appointment.id, user.id);
+    await logAudit(c.env.DB, { userId: user.id, action: 'appointment_request.converted', entityType: 'appointment_request', entityId: request.id, details: { appointmentId: appointment.id } });
+    await logAudit(c.env.DB, { userId: user.id, action: 'appointment.created_from_request', entityType: 'appointment', entityId: appointment.id });
+    return c.json({ request: converted, appointment }, 201);
+  } catch (err) {
+    if (err instanceof appointmentService.AppointmentConflictError) return c.json({ error: 'Doctor already has an appointment in this time range' }, 409);
+    throw err;
+  }
 });
 
 // ---------------------------------------------------------------------------

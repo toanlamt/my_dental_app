@@ -71,6 +71,29 @@ export const updateAppointmentSchema = z.object({
   status: z.enum(['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show']).optional(),
 });
 
+const publicServiceSlugs = ['general-dentistry', 'dental-cleaning', 'teeth-whitening', 'dental-implants', 'orthodontics', 'childrens-dentistry'] as const;
+
+export const createAppointmentRequestSchema = z.object({
+  full_name: z.string().trim().min(1, 'Full name is required').max(200),
+  phone: z.string().trim().regex(/^\+?[0-9 ()-]{7,30}$/, 'Valid phone is required'),
+  email: z.string().trim().email().max(200).optional().nullable(),
+  service_slug: z.enum(publicServiceSlugs).optional().nullable(),
+  doctor_id: z.string().uuid().optional().nullable(),
+  preferred_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid date is required').refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)), 'Valid date is required'),
+  preferred_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Valid time is required'),
+  message: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const reviewAppointmentRequestSchema = z.object({
+  status: z.enum(['approved', 'rejected']),
+  rejection_reason: z.string().trim().max(500).optional().nullable(),
+});
+
+export const convertAppointmentRequestSchema = z.object({
+  patient_id: z.string().uuid().optional(),
+  doctor_id: z.string().uuid().optional(),
+});
+
 /** Parses and validates a JSON request body. Returns either the typed data or an error Response to return as-is. */
 export async function parseJsonBody<T>(c: Context, schema: z.ZodType<T>): Promise<T | Response> {
   let body: unknown;

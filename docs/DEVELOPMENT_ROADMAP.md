@@ -65,9 +65,11 @@ pass and the feature actually works), not merely implemented. See
   to staff/admin in the management system; input is validated server-side; localized EN/VI.
 - **Isolation requirements**: Must not require the visitor to have an account; must not break
   the existing internal appointment-creation flow used by staff/admin.
-- **Status**: `PLANNED` — no public booking form or endpoint exists; the only appointment
-  creation path today is `POST /api/appointments`, which requires `requireAuth` + role
-  `admin`/`staff`.
+- **Status**: `IN PROGRESS` — `/book` submits validated anonymous requests to
+  `POST /api/public/appointment-requests`, persisted in `appointment_requests`; admin/staff
+  can review at `/appointment-requests` and explicitly approve then convert through the existing
+  appointment service with conflict detection and audit logging. Build/typecheck/lint/manual
+  browser verification remain pending because npm is unavailable in the current environment.
 
 ## Phase 4 — Management improvements
 - **Objective**: Improve/harden the existing internal management system.

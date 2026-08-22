@@ -192,8 +192,8 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   reusable `LanguageSwitcher` persists `en`/`vi` in `localStorage` and updates without reload.
 - Locale-aware date helpers now use `en-US` or `vi-VN`. The live shell, login, dashboard, patients,
   shared modal, and protected loading state are migrated; calendar and patient detail remain.
-- Date/time formatting uses `Intl.DateTimeFormat`/`toLocaleString` with a hardcoded `'en-US'`
-  locale in `src/lib/utils.ts` and inline in several pages.
+- Date/time formatting uses `Intl.DateTimeFormat`/`toLocaleString`; the appointment request
+  workflow formats dates with the active `en-US` or `vi-VN` locale.
 - This is a known gap against the project's permanent requirement to support English and
   Vietnamese everywhere; establishing the i18n foundation is Roadmap Phase 0.
 
@@ -217,11 +217,16 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - Public Phase 2 information pages for services and service details, about, doctors and doctor
   details, FAQ accordion, and contact/map placeholder. These use static bilingual content,
   translated metadata, breadcrumbs, translated invalid-slug states, and no backend dependencies.
+- Public appointment request workflow at `/book`, with bilingual form, server-side validation,
+  duplicate protection, safe public doctor listing, and pending confirmation state.
+- Appointment request management at `/appointment-requests`, protected for admin/staff, with
+  status/date/search filters, review actions, exact-phone patient reuse, explicit approval-only
+  conversion through the existing appointment service, conflict detection, and audit logging.
 
 ## 10. Incomplete / not started
 
-- **Public website**: Phase 1 landing page and Phase 2 services, about, doctors, FAQ, and contact
-  pages are implemented; public appointment booking remains a later phase.
+- **Public website**: Phase 1 landing page, Phase 2 information pages, and Phase 3 appointment
+  request booking are implemented.
 - **Internationalization**: i18next/react-i18next is installed with persisted EN/VI resources;
   the public landing page is fully localized. Calendar and patient detail still have known
   hardcoded UI strings.
@@ -235,6 +240,9 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - **SEO, accessibility, performance audits** — not started (Roadmap Phase 9).
 - **Automated tests** — no test framework installed. Build/typecheck/lint could not be run on
   2026-08-22 because `npm` is unavailable in both Windows PowerShell and WSL.
+- **Automated tests** — no test framework is installed. `npm` is unavailable in the current
+  Windows PowerShell environment, so build/typecheck/lint/tests remain unrun here; editor
+  diagnostics are clean for the Phase 3 TypeScript files.
 - **Production readiness** (secrets management beyond `.dev.vars.example`, real D1 database id
   in `wrangler.toml` is a placeholder, no CI config found) — not started (Roadmap Phase 10).
 

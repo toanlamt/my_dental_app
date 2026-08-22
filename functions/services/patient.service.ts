@@ -74,6 +74,11 @@ export async function getPatientById(db: Env['DB'], id: string): Promise<Patient
   return row ? withLegacyFields(row) : null;
 }
 
+export async function findPatientByPhone(db: Env['DB'], phone: string): Promise<Patient | null> {
+  const row = await db.prepare('SELECT * FROM patients WHERE phone = ? LIMIT 1').bind(phone).first<Patient>();
+  return row ? withLegacyFields(row) : null;
+}
+
 export type CreatePatientInput = {
   full_name: string;
   date_of_birth?: string | null;

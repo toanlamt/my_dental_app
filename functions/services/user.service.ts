@@ -23,6 +23,13 @@ export async function listDoctors(db: Env['DB']): Promise<PublicUser[]> {
   return results;
 }
 
+export async function listPublicDoctors(db: Env['DB']): Promise<Array<{ id: string; full_name: string }>> {
+  const { results } = await db.prepare(
+    `SELECT id, full_name FROM users WHERE role = 'doctor' AND is_active = 1 ORDER BY full_name ASC`,
+  ).all<{ id: string; full_name: string }>();
+  return results;
+}
+
 export type CreateUserInput = {
   username: string;
   password: string;

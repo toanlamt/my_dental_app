@@ -33,6 +33,27 @@ export type Patient = {
 
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
+export type AppointmentRequestStatus = 'pending' | 'approved' | 'rejected' | 'converted';
+
+export type AppointmentRequest = {
+  id: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  service_slug: string | null;
+  doctor_id: string | null;
+  doctor_name?: string | null;
+  preferred_date: string;
+  preferred_time: string;
+  message: string | null;
+  status: AppointmentRequestStatus;
+  rejection_reason: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  converted_appointment_id: string | null;
+};
+
 export type Appointment = {
   id: string;
   patient_id: string;

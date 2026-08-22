@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, CalendarDays, ClipboardList, LayoutDashboard, LogOut, Menu, Stethoscope, Users, X } from 'lucide-react';
+import { Bell, CalendarDays, ClipboardList, FileClock, LayoutDashboard, LogOut, Menu, Stethoscope, Users, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ const navigation = [
   { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard },
   { key: 'patients', path: '/patients', icon: Users },
   { key: 'calendar', path: '/calendar', icon: CalendarDays },
+  { key: 'appointmentRequests', path: '/appointment-requests', icon: FileClock },
 ];
 
 export function AppLayout() {
