@@ -7,7 +7,7 @@ const savedLanguage = localStorage.getItem('language');
 
 void i18n.use(initReactI18next).init({
   resources: { en: { common: en }, vi: { common: vi } },
-  lng: savedLanguage === 'vi' ? 'vi' : 'en',
+  lng: savedLanguage === 'en' ? 'en' : 'vi',
   fallbackLng: 'en',
   defaultNS: 'common',
   interpolation: { escapeValue: false },
