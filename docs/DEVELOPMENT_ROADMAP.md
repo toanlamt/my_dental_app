@@ -40,7 +40,10 @@ pass and the feature actually works), not merely implemented. See
   (EN/VI); build/typecheck/lint pass.
 - **Isolation requirements**: Must not require authentication; must not affect existing
   management routes.
-- **Status**: `PLANNED` — no public routes or pages exist in `AppRouter.tsx` yet.
+- **Status**: `IN PROGRESS` — the static bilingual landing page and dedicated public layout are
+  implemented. Required build/typecheck/lint and manual browser verification remain blocked
+  because `npm` is unavailable in both Windows PowerShell and WSL; do not mark `DONE` until
+  those checks are run successfully.
 
 ## Phase 2 — Public information pages
 - **Objective**: Services, About, Doctors, FAQ, Contact pages.

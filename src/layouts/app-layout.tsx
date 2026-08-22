@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/language-switcher';
 
 const navigation = [
-  { key: 'dashboard', path: '/', icon: LayoutDashboard },
+  { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard },
   { key: 'patients', path: '/patients', icon: Users },
   { key: 'calendar', path: '/calendar', icon: CalendarDays },
 ];

@@ -109,16 +109,17 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
 
 | Path              | Component                    | Protected |
 |-------------------|-------------------------------|-----------|
+| `/`               | `LandingPage` via `PublicLayout` | No |
 | `/login`          | `LoginPage`                   | No |
-| `/`               | `DashboardPageV2`              | Yes |
+| `/dashboard`      | `DashboardPageV2`              | Yes |
 | `/patients`       | `PatientsPageV2`                | Yes |
 | `/patients/:id`   | `PatientDetailPageV2`           | Yes |
 | `/calendar`       | `CalendarPageV2`                | Yes |
 | `*`               | redirect to `/`                | — |
 
-There is **no public website** yet — no landing page, services, about, doctors, FAQ, contact,
-or public appointment booking pages/routes exist in the codebase. Everything currently behind
-`AppRouter` is the internal (authenticated) management system, plus `/login`.
+The Phase 1 public landing page is static and does not call the backend. `PublicLayout` owns the
+public header/footer and localized navigation. Future `/services`, `/about`, and `/book` links
+fall through the SPA fallback until their later phases. Internal routes remain protected.
 
 ## 5. Backend API (`functions/api/[[route]].ts`, all under `/api`)
 
@@ -201,13 +202,16 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   (for admin/staff) — read-only, no persistence/dismissal.
 - Audit logging for auth, patient, note, appointment, and user-creation actions.
 - Basic responsive app shell (collapsible sidebar nav) for the management system.
+- Public Phase 1 landing page with static marketing data, responsive public layout, EN/VI copy,
+  visuals, benefits, services, doctors, FAQ, testimonials, CTA, clinic information, and footer.
 
 ## 10. Incomplete / not started
 
-- **Public website**: landing page, services, about, doctors, FAQ, contact, public appointment
-  booking — none exist yet (Roadmap Phases 1–3).
-- **Internationalization**: no library installed, no translation files, all text hardcoded
-  English (Roadmap Phase 0).
+- **Public website**: Phase 1 landing page is implemented; services, about, doctors, FAQ,
+  contact detail pages, and public appointment booking remain later phases.
+- **Internationalization**: i18next/react-i18next is installed with persisted EN/VI resources;
+  the public landing page is fully localized. Calendar and patient detail still have known
+  hardcoded UI strings.
 - **Medical records** beyond free-text patient notes (structured treatment history) — not
   implemented (Roadmap Phase 5).
 - **Dental chart** — not implemented (Roadmap Phase 6).
@@ -216,7 +220,8 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - **Persisted/actionable notifications** (e.g. read/unread state, push/email) — current feed
   is read-only and derived, not implemented (Roadmap Phase 8).
 - **SEO, accessibility, performance audits** — not started (Roadmap Phase 9).
-- **Automated tests** — no test framework installed.
+- **Automated tests** — no test framework installed. Build/typecheck/lint could not be run on
+  2026-08-22 because `npm` is unavailable in both Windows PowerShell and WSL.
 - **Production readiness** (secrets management beyond `.dev.vars.example`, real D1 database id
   in `wrangler.toml` is a placeholder, no CI config found) — not started (Roadmap Phase 10).
 

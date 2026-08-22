@@ -59,3 +59,11 @@ body {
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
+.public-site { font-family: 'Segoe UI', sans-serif; }
+.public-site .font-serif, .public-heading { font-family: Georgia, 'Times New Roman', serif; }
+.public-nav-link { color: #52716e; font-size: 0.875rem; font-weight: 600; }
+.public-nav-link:hover, .public-nav-link:focus-visible { color: #12343b; }
+.public-kicker { color: #c18b13; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+.public-heading { margin-top: 0.75rem; max-width: 38rem; font-size: clamp(2.25rem, 5vw, 3.75rem); line-height: 1.05; letter-spacing: -0.02em; }
+.public-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 9999px; padding: 0.875rem 1.5rem; font-size: 0.875rem; font-weight: 700; }
+
