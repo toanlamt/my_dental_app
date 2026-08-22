@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&family=Noto+Serif:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @theme inline {
@@ -56,11 +57,11 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Noto Sans', 'Segoe UI', Arial, sans-serif;
 }
 
-.public-site { font-family: 'Segoe UI', sans-serif; }
-.public-site .font-serif, .public-heading { font-family: Georgia, 'Times New Roman', serif; }
+.public-site { font-family: 'Noto Sans', 'Segoe UI', Arial, sans-serif; }
+.public-site .font-serif, .public-heading { font-family: 'Noto Serif', Georgia, 'Times New Roman', serif; }
 .public-nav-link { color: #52716e; font-size: 0.875rem; font-weight: 600; }
 .public-nav-link:hover, .public-nav-link:focus-visible { color: #12343b; }
 .public-kicker { color: #c18b13; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
