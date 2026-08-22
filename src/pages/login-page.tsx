@@ -1,0 +1,26 @@
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Stethoscope, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { Button } from '@/components/ui/button';
+import { CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui/primitives';
+
+export function LoginPage() {
+  const { user, login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [username, setUsername] = useState('staff@clinic.local');
+  const [password, setPassword] = useState('ChangeMe123!');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  if (user) return <Navigate to="/" replace />;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(''); setLoading(true);
+    try { await login(username, password); navigate((location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/'); } catch (err) { setError(err instanceof Error ? err.message : 'Unable to sign in'); } finally { setLoading(false); }
+  };
+
+  return <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4"><div className="grid w-full max-w-4xl overflow-hidden rounded-xl border bg-white shadow-xl md:grid-cols-[1fr_1.05fr]"><div className="hidden flex-col justify-between bg-primary p-10 text-primary-foreground md:flex"><div><div className="mb-12 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-md bg-white/15"><Stethoscope size={22} /></div><span className="font-semibold tracking-tight">BrightSmile</span></div><h1 className="max-w-xs text-3xl font-semibold leading-tight">Care coordination, made clear.</h1><p className="mt-4 max-w-xs text-sm leading-6 text-primary-foreground/75">A calm workspace for your front desk and clinical team.</p></div><div className="flex items-center gap-2 text-xs text-primary-foreground/70"><ShieldCheck size={15} />Secure staff access</div></div><div className="p-6 sm:p-10"><CardHeader className="px-0"><CardTitle className="text-2xl">Welcome back</CardTitle><CardDescription>Sign in to your clinic workspace.</CardDescription></CardHeader><CardContent className="px-0"><form className="space-y-5" onSubmit={submit}><div className="space-y-2"><Label htmlFor="username">Username</Label><Input id="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></div>{error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}<Button className="w-full" type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</Button><p className="text-center text-xs text-muted-foreground">Demo: staff@clinic.local / ChangeMe123!</p></form></CardContent></div></div></div>;
+}

@@ -1,0 +1,2 @@
+# Copy this file to .dev.vars for local `wrangler pages dev` (never commit .dev.vars).
+JWT_SECRET="replace-with-a-long-random-local-dev-secret"
