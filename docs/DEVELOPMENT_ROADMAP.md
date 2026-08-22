@@ -29,8 +29,9 @@ pass and the feature actually works), not merely implemented. See
   screens. Introducing i18n should not require rewriting every existing string in the same
   phase (can be incremental), but must not regress current functionality.
 - **Status**: `IN PROGRESS` — project scaffolding (React/Vite/Tailwind/Cloudflare stack) is
-  done; **no i18n library is installed and no locale files exist** (verified in
-  `package.json` and full-repo search). All current UI text is hardcoded English.
+  done; i18n dependencies and EN/VI locale files are now declared, with a persisted language
+  switcher and several live screens migrated. Calendar and patient detail still have substantial
+  hardcoded strings, and npm is unavailable in both Windows and WSL for verification.
 
 ## Phase 1 — Public landing page
 - **Objective**: Public-facing landing page for the clinic.

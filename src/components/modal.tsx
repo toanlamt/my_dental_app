@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from './ui/primitives';
+import { useTranslation } from 'react-i18next';
 
 export type ModalField = {
   name: string;
@@ -22,6 +23,7 @@ export function Modal({ title, description, fields, initialValues, submitLabel =
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: Record<string, string>) => Promise<void> | void;
 }) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<Record<string, string>>(initialValues ?? {});
   const [saving, setSaving] = useState(false);
 
@@ -58,7 +60,7 @@ export function Modal({ title, description, fields, initialValues, submitLabel =
                 <Label htmlFor={field.name}>{field.label}</Label>
                 {field.type === 'select' ? (
                   <select id={field.name} required={field.required} value={values[field.name] ?? ''} onChange={(event) => updateValue(field.name, event.target.value)} className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <option value="">Select {field.label.toLowerCase()}</option>
+                    <option value="">{t('common.create')} {field.label.toLowerCase()}</option>
                     {field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 ) : field.type === 'textarea' ? (
@@ -69,8 +71,8 @@ export function Modal({ title, description, fields, initialValues, submitLabel =
               </div>
             ))}
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={saving}>{saving ? 'Saving...' : submitLabel}</Button>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
+              <Button type="submit" disabled={saving}>{saving ? t('common.saving') : submitLabel}</Button>
             </div>
           </form>
         </CardContent>

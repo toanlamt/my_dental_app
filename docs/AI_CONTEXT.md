@@ -22,9 +22,10 @@
 - **Validation**: `zod` (`functions/lib/validation.ts`).
 - **Password hashing**: PBKDF2-SHA256 implemented with Web Crypto (`functions/lib/password.ts`).
 - **Lint**: `oxlint` (`.oxlintrc.json`, plugins: react, typescript, oxc).
-- **No i18n library is installed** (no `react-i18next`, `i18next`, `react-intl`, or similar in
-  `package.json`). All current UI text is hardcoded English. This is a gap relative to the
-  permanent English/Vietnamese requirement — see Roadmap Phase 0.
+- **Internationalization**: `i18next` and `react-i18next` are declared in `package.json`, with
+  EN/VI resources under `src/i18n/locales`, English fallback, and `localStorage` persistence.
+  Shell, login, dashboard, patients, modal, and protected loading UI use translation keys;
+  calendar and patient detail still contain hardcoded UI strings.
 - **No testing framework is installed** (no Jest/Vitest/Playwright in `package.json`).
 
 Key scripts (`package.json`):
@@ -176,8 +177,10 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 
 ## 8. Internationalization
 
-- **Not implemented.** No i18n library is installed and all UI strings are hardcoded English
-  (see `src/pages/*`, `src/layouts/app-layout.tsx`, API error messages).
+- `i18next` + `react-i18next` are initialized at the router root with English fallback. The
+  reusable `LanguageSwitcher` persists `en`/`vi` in `localStorage` and updates without reload.
+- Locale-aware date helpers now use `en-US` or `vi-VN`. The live shell, login, dashboard, patients,
+  shared modal, and protected loading state are migrated; calendar and patient detail remain.
 - Date/time formatting uses `Intl.DateTimeFormat`/`toLocaleString` with a hardcoded `'en-US'`
   locale in `src/lib/utils.ts` and inline in several pages.
 - This is a known gap against the project's permanent requirement to support English and
