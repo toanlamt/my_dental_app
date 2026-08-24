@@ -13,6 +13,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function shouldCheckInitialAuth(pathname: string) {
+  if (pathname === '/login') return true;
+  if (pathname.startsWith('/dashboard')) return true;
+  if (pathname.startsWith('/patients')) return true;
+  if (pathname.startsWith('/calendar')) return true;
+  if (pathname.startsWith('/appointment-requests')) return true;
+  if (pathname.startsWith('/notifications')) return true;
+  return false;
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: 'include', ...options, headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) } });
   const body = await response.json().catch(() => ({}));
@@ -29,6 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!shouldCheckInitialAuth(window.location.pathname)) {
+      setLoading(false);
+      return;
+    }
+
     request<{ user: User }>('/api/auth/me')
       .then(({ user: currentUser }) => setUser(currentUser))
       .catch(() => setUser(null))

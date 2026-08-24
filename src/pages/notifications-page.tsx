@@ -89,7 +89,7 @@ export function NotificationsPage() {
         </Button>
       </div>
 
-      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" aria-live="assertive" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       <Card>
         <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
@@ -125,6 +125,7 @@ export function NotificationsPage() {
                         <p className="font-medium text-slate-900">
                           {t(`notifications.types.${notification.type}.title`, { defaultValue: notification.type.replaceAll('_', ' ') })}
                         </p>
+                        {!notification.read_at && <p className="mt-0.5 text-xs font-semibold text-amber-700">{t('notifications.filters.unread')}</p>}
                         <p className="text-sm text-slate-600">{t(`notifications.types.${notification.type}.message`, params)}</p>
                         <p className="mt-1 text-xs text-muted-foreground" title={formatDateTime(notification.created_at)}>
                           {formatRelativeTime(notification.created_at)}

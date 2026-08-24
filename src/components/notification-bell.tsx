@@ -128,7 +128,7 @@ export function NotificationBell() {
             </Button>
           </div>
 
-          {error && <p className="mb-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-700">{error}</p>}
+          {error && <p role="alert" aria-live="assertive" className="mb-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-700">{error}</p>}
 
           {loading ? (
             <p className="py-6 text-center text-sm text-muted-foreground">{t('common.loading')}</p>
@@ -148,6 +148,7 @@ export function NotificationBell() {
                     <p className="text-sm font-medium text-slate-900">
                       {t(`notifications.types.${notification.type}.title`, { defaultValue: notification.type.replaceAll('_', ' ') })}
                     </p>
+                    {!notification.read_at && <p className="mt-0.5 text-[11px] font-semibold text-amber-700">{t('notifications.filters.unread')}</p>}
                     <p className="mt-0.5 text-xs text-slate-600">
                       {t(`notifications.types.${notification.type}.message`, params)}
                     </p>

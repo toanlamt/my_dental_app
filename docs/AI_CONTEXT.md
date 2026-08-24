@@ -108,9 +108,10 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
   `http://127.0.0.1:8788` (the `wrangler pages dev` port) — see `vite.config.ts`.
 - Business logic lives in `functions/services/*`; the route handlers stay thin (parse input,
   call a service, log an audit entry, return JSON).
-- The frontend is a single-page app behind `react-router-dom`; `AuthProvider` fetches
-  `/api/auth/me` on load to determine session state, and `ProtectedRoute` gates all
-  authenticated routes.
+- The frontend is a single-page app behind `react-router-dom`; `ProtectedRoute` gates all
+  authenticated routes. `AuthProvider` now only probes `/api/auth/me` on login/protected
+  paths (not on public marketing routes), so public pages and unknown routes do not trigger
+  private API requests.
 - Path alias `@` → `src/` (configured in `vite.config.ts` and tsconfig).
 - `tsconfig.json` is a solution file referencing `tsconfig.app.json`, `tsconfig.node.json`,
   and `tsconfig.functions.json` (separate compilation for frontend vs. Cloudflare Functions).
@@ -127,6 +128,7 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
 | `/doctors/:slug`  | `DoctorDetailPage` via `PublicLayout` | No |
 | `/faq`            | `FaqPage` via `PublicLayout` | No |
 | `/contact`        | `ContactPage` via `PublicLayout` | No |
+| `/book`           | `AppointmentBookingPage` via `PublicLayout` | No |
 | `/login`          | `LoginPage`                   | No |
 | `/dashboard`      | `DashboardPageV2`              | Yes |
 | `/patients`       | `PatientsPageV2`                | Yes |
@@ -134,13 +136,14 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
 | `/calendar`       | `CalendarPageV2`                | Yes |
 | `/appointment-requests` | `AppointmentRequestsPage` | Yes |
 | `/notifications`  | `NotificationsPage`             | Yes |
-| `*`               | redirect to `/`                | — |
+| `*` (public)      | `NotFoundPage` (translated, user-friendly) | No |
+| `*` (app/global)  | `NotFoundPage` (translated, user-friendly) | No |
 
 The Phase 1 landing page and Phase 2 public information pages are static and do not call the
 backend. `PublicLayout` owns the public header/footer, responsive mobile navigation, and
 localized navigation. Public records and localized copy live in `src/data/public-data.ts` and
-`src/i18n/locales/{en,vi}/public-pages.ts`. `/book` remains a future-phase link and falls
-through to the home redirect. Internal routes remain protected.
+`src/i18n/locales/{en,vi}/public-pages.ts`. Public appointment booking at `/book` is live and
+uses public endpoints only. Internal routes remain protected.
 
 ## 5. Backend API (`functions/api/[[route]].ts`, all under `/api`)
 
@@ -303,6 +306,26 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   - Responsive design: tooth chart usable on desktop, tablet, and mobile with horizontal scroll if needed.
   - Integration with patient detail page as a new "Dental Chart" tab.
   - No impact on medical records or other patient data.
+- Phase 9 SEO / accessibility / performance hardening (COMPLETE):
+  - Added route-level metadata management for public pages: unique localized title + description,
+    canonical URL, Open Graph (`og:title`, `og:description`, `og:type`, `og:url`, `og:image`,
+    `og:locale`, `og:site_name`), and Twitter card metadata.
+  - Added baseline metadata in `index.html` and a local OG image asset (`public/og-cover.svg`).
+  - Replaced wildcard redirect with translated not-found page for invalid routes and set
+    `robots=noindex,nofollow` on that page.
+  - Added app-level React error boundary with localized, non-technical fallback UI and recovery
+    options (reload, back home).
+  - Added route-level lazy loading with `React.lazy` + `Suspense` for public and management
+    routes, reducing initial JS payload and producing split route chunks in Vite build output.
+  - Improved public accessibility: skip-to-main-content link, better mobile-nav semantics
+    (`aria-expanded`, `aria-controls`, dialog semantics), keyboard Escape close handling,
+    accessible error announcements (`role=alert`, `aria-live`) for login/booking flows.
+  - Improved booking form semantics with explicit label/input associations (`htmlFor` + `id`).
+  - Improved image performance/CLS on the landing page via intrinsic image dimensions and
+    responsive `sizes` attributes.
+  - Ensured public/unknown routes no longer call private auth endpoints on first load.
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only, no new blocking
+    errors), `npm run build` PASS, `npm test` not runnable (no `test` script in `package.json`).
 
 ## 10. Incomplete / not started
 

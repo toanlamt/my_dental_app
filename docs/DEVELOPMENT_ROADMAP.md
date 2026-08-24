@@ -168,8 +168,24 @@ pass and the feature actually works), not merely implemented. See
   build/typecheck/lint pass.
 - **Isolation requirements**: Applies mainly to public pages (Phases 1–3); should not require
   management-system changes.
-- **Status**: `PLANNED` — not started; depends on the public website (Phases 1–3) existing
-  first.
+- **Status**: `DONE` — implemented and verified (2026-08-24):
+  - Added route-level SEO metadata management for public routes with localized EN/VI titles,
+    descriptions, canonical URLs, Open Graph tags, and Twitter card fields.
+  - Added baseline metadata defaults in `index.html` and local social preview image asset
+    (`public/og-cover.svg`).
+  - Added translated 404/not-found experience for wildcard routes and invalid public slugs;
+    removed wildcard redirect-to-home behavior.
+  - Added localized app-level React error boundary fallback (no stack traces exposed,
+    with reload and back-home recovery actions).
+  - Added route-level code splitting (`React.lazy` + `Suspense`) across public and management
+    pages with measurable route chunk outputs in production build.
+  - Improved public accessibility: skip link, mobile menu accessibility semantics and Escape
+    handling, booking form label associations, and accessible live error announcements.
+  - Improved landing-page image loading behavior with explicit dimensions and `sizes` hints.
+  - Prevented private auth endpoint probing on public and unknown routes to keep public pages
+    independent from authenticated APIs.
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only),
+    `npm run build` PASS, `npm test` unavailable (no `test` script in `package.json`).
 
 ## Phase 10 — Production readiness audit
 - **Objective**: Final audit before/for production deployment.

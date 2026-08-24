@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">BrightSmile Dental</title>
+  <desc id="desc">Thoughtful dental care for every smile.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e5f0ec" />
+      <stop offset="100%" stop-color="#c5ddd5" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect x="72" y="72" width="1056" height="486" rx="32" fill="#ffffff" opacity="0.9" />
+  <circle cx="180" cy="170" r="58" fill="#12343b" />
+  <path d="M180 126c-24 0-43 19-43 43 0 23 19 42 43 42s43-19 43-42c0-24-19-43-43-43zm0 68c-14 0-25-11-25-25s11-25 25-25 25 11 25 25-11 25-25 25z" fill="#f4c95d" />
+  <text x="270" y="186" fill="#12343b" font-family="Noto Serif, Georgia, serif" font-size="72" font-weight="700">BrightSmile Dental</text>
+  <text x="78" y="312" fill="#12343b" font-family="Noto Sans, Arial, sans-serif" font-size="38" font-weight="600">Thoughtful dental care for every smile</text>
+  <text x="78" y="374" fill="#52716e" font-family="Noto Sans, Arial, sans-serif" font-size="30">Services, doctors, and easy appointment requests in English and Vietnamese.</text>
+</svg>
