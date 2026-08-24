@@ -38,6 +38,21 @@ export const createNoteSchema = z.object({
   note: z.string().trim().min(1).max(4000),
 });
 
+const medicalRecordFieldsSchema = z.object({
+  appointment_id: z.string().uuid().optional().nullable(),
+  record_date: z.string().datetime(),
+  reason: z.string().trim().min(1).max(500),
+  examination: z.string().trim().max(4000).optional().nullable(),
+  diagnosis: z.string().trim().max(4000).optional().nullable(),
+  treatment: z.string().trim().max(4000).optional().nullable(),
+  clinical_notes: z.string().trim().max(4000).optional().nullable(),
+  follow_up: z.string().trim().max(2000).optional().nullable(),
+  follow_up_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'follow_up_date must be YYYY-MM-DD').refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)), 'follow_up_date must be a valid date').optional().nullable(),
+});
+
+export const createMedicalRecordSchema = medicalRecordFieldsSchema;
+export const updateMedicalRecordSchema = medicalRecordFieldsSchema.partial();
+
 export const roleSchema = z.enum(['admin', 'doctor', 'staff']);
 
 export const createUserSchema = z.object({

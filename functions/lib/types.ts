@@ -78,6 +78,25 @@ export type PatientNote = {
   updated_at: string;
 };
 
+export type MedicalRecord = {
+  id: string;
+  patient_id: string;
+  appointment_id: string | null;
+  author_id: string;
+  author_name?: string;
+  appointment_start_at?: string | null;
+  record_date: string;
+  reason: string;
+  examination: string | null;
+  diagnosis: string | null;
+  treatment: string | null;
+  clinical_notes: string | null;
+  follow_up: string | null;
+  follow_up_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AuditLog = {
   id: string;
   user_id: string | null;

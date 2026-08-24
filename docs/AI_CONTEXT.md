@@ -61,6 +61,7 @@ migrations/
                                        patients.dob->date_of_birth, appointments.start_time/end_time->start_at/end_at,
                                        drops patients.created_by, adds patients.medical_notes,
                                        adds updated_at columns, adds 'confirmed' appointment status.
+  0005_medical_records.sql              Structured medical records table and patient/appointment/date indexes.
 
 src/
   main.tsx               Entry point — renders AppRouter (NOT App.tsx).
@@ -145,6 +146,10 @@ through to the home redirect. Internal routes remain protected.
 | GET `/patients/:id`                | requireAuth                    | Patient + notes + appointment history. |
 | PATCH `/patients/:id`               | requireAuth + role `admin,staff` | Update patient. |
 | POST `/patients/:id/notes`         | requireAuth + role `admin,staff,doctor` | Add clinical note. |
+| GET `/patients/:patientId/medical-records` | requireAuth + role `admin,staff,doctor` | Paginated structured records for a patient. |
+| POST `/patients/:patientId/medical-records` | requireAuth + role `admin,staff,doctor` | Create a structured medical record. |
+| GET `/medical-records/:id`           | requireAuth + role `admin,staff,doctor` | View one medical record. |
+| PATCH `/medical-records/:id`         | requireAuth + role `admin,staff,doctor` | Edit one medical record. |
 | GET `/appointments`                | requireAuth                    | List/filter appointments (doctors see only their own). |
 | GET `/appointments/:id`            | requireAuth                    | Single appointment (doctor scoped to own). |
 | GET `/appointments/today`          | requireAuth                    | Today's appointments. |
@@ -165,7 +170,10 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - **patient_notes**: `id, patient_id, author_id, note, created_at, updated_at`.
 - **audit_logs**: `id, user_id, action, entity_type, entity_id, details (JSON text), created_at`.
 - No dedicated notifications table (derived from `appointments` + `audit_logs`).
-- No tables yet for: medical records/treatment history beyond `patient_notes`, dental chart,
+- **medical_records**: `id, patient_id, appointment_id (nullable), author_id, record_date, reason,
+  examination, diagnosis, treatment, clinical_notes, follow_up, follow_up_date, created_at,
+  updated_at`; appointment data is referenced, not duplicated.
+- No tables yet for: dental chart,
   patient documents/X-rays, or R2 object references.
 - `functions/lib/types.ts` and the services expose legacy field aliases (`email`/`name` on
   users, `dob` on patients, `start_time`/`end_time` on appointments) alongside the current
@@ -203,6 +211,10 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   mutating/sensitive endpoint.
 - Patient management: create, list (paginated + search by name/phone), view detail, update,
   add clinical notes.
+- Structured medical records: additive patient timeline with paginated newest-first list, detail,
+  create/edit forms, optional appointment association, role-scoped API access, and audit events
+  for listing, viewing, creation, and updates. Existing `patient_notes` remain separate and are
+  not migrated or deleted.
 - Doctor listing (for assigning appointments).
 - Appointment management: create/update/cancel with per-doctor double-booking conflict
   detection, list/filter by date range/doctor/status, "today" endpoint, calendar view.

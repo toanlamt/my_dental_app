@@ -2,6 +2,7 @@ import en from '../en/common';
 
 const common = {
   ...en,
+  medicalRecords: { title: 'Hồ sơ bệnh án', description: 'Lịch sử lâm sàng có cấu trúc của bệnh nhân.', create: 'Tạo hồ sơ', edit: 'Sửa hồ sơ', view: 'Xem hồ sơ', visit: 'Lần khám', recordDate: 'Ngày ghi nhận', doctor: 'Bác sĩ', appointment: 'Lịch hẹn', reason: 'Lý do khám', examination: 'Khám / phát hiện', diagnosis: 'Chẩn đoán', treatment: 'Điều trị', clinicalNotes: 'Ghi chú lâm sàng', followUp: 'Khuyến nghị tái khám', followUpDate: 'Ngày tái khám', created: 'Ngày tạo', updated: 'Ngày cập nhật', noRecords: 'Chưa có hồ sơ bệnh án cho bệnh nhân này.', unableToLoad: 'Không thể tải hồ sơ bệnh án.', unableToSave: 'Không thể lưu hồ sơ bệnh án.', detail: 'Chi tiết hồ sơ bệnh án', noAppointment: 'Không liên kết lịch hẹn' },
   common: { cancel: 'Hủy', save: 'Lưu', saving: 'Đang lưu...', create: 'Tạo', notProvided: 'Chưa cung cấp', loading: 'Đang tải...', retry: 'Thử lại', email: 'Email', address: 'Địa chỉ', none: 'Không có' },
   navigation: { ...en.navigation, dashboard: 'Tổng quan', patients: 'Bệnh nhân', calendar: 'Lịch hẹn', appointmentRequests: 'Yêu cầu đặt lịch', workspace: 'Không gian làm việc', quickAccess: 'Truy cập nhanh', patientRecords: 'Hồ sơ bệnh nhân', signOut: 'Đăng xuất', clinicWorkspace: 'Không gian phòng khám', notifications: 'Thông báo', close: 'Đóng điều hướng', open: 'Mở điều hướng', overlay: 'Đóng lớp điều hướng' },
   language: { english: 'Tiếng Anh', vietnamese: 'Tiếng Việt', switch: 'Ngôn ngữ' },

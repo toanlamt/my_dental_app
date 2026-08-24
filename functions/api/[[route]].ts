@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import type { Env } from '../lib/db';
 import { requireAuth, requireRole, createSession, clearSession, type AuthVariables } from '../lib/auth';
 import { verifyPassword } from '../lib/password';
@@ -14,6 +15,8 @@ import {
   reviewAppointmentRequestSchema,
   convertAppointmentRequestSchema,
   updateAppointmentSchema,
+  createMedicalRecordSchema,
+  updateMedicalRecordSchema,
   parseJsonBody,
 } from '../lib/validation';
 import { toPublicUser, type AppointmentStatus, type AppointmentRequestStatus } from '../lib/types';
@@ -22,6 +25,7 @@ import * as patientService from '../services/patient.service';
 import * as appointmentService from '../services/appointment.service';
 import * as notificationService from '../services/notification.service';
 import * as appointmentRequestService from '../services/appointment-request.service';
+import * as medicalRecordService from '../services/medical-record.service';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>().basePath('/api');
 
@@ -242,11 +246,87 @@ app.post('/patients/:id/notes', requireAuth, requireRole('admin', 'staff', 'doct
   return c.json({ note }, 201);
 });
 
+// ---------------------------------------------------------------------------
+// Medical records
+// ---------------------------------------------------------------------------
+
+const clinicalRoles = requireRole('admin', 'staff', 'doctor');
+const uuidSchema = z.string().uuid();
+
+app.get('/patients/:patientId/medical-records', requireAuth, clinicalRoles, async (c) => {
+  const patientId = c.req.param('patientId');
+  if (!uuidSchema.safeParse(patientId).success) return c.json({ error: 'Invalid patient id' }, 400);
+  const patient = await patientService.getPatientById(c.env.DB, patientId);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+  const page = Math.max(1, Number.parseInt(c.req.query('page') ?? '1', 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(c.req.query('pageSize') ?? '20', 10) || 20));
+  const user = c.get('user');
+  const result = await medicalRecordService.listMedicalRecords(c.env.DB, patientId, { userId: user.id, isDoctor: user.role === 'doctor' }, page, pageSize);
+  await logAudit(c.env.DB, { userId: user.id, action: 'medical_record.listed', entityType: 'patient', entityId: patientId });
+  return c.json(result);
+});
+
+app.post('/patients/:patientId/medical-records', requireAuth, clinicalRoles, async (c) => {
+  const parsed = await parseJsonBody(c, createMedicalRecordSchema);
+  if (parsed instanceof Response) return parsed;
+  const patientId = c.req.param('patientId');
+  if (!uuidSchema.safeParse(patientId).success) return c.json({ error: 'Invalid patient id' }, 400);
+  const patient = await patientService.getPatientById(c.env.DB, patientId);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+  const user = c.get('user');
+  if (parsed.appointment_id) {
+    const appointment = await appointmentService.getAppointmentById(c.env.DB, parsed.appointment_id);
+    if (!appointment || appointment.patient_id !== patientId) return c.json({ error: 'Appointment not found' }, 404);
+    if (user.role === 'doctor' && appointment.doctor_id !== user.id) return c.json({ error: 'Appointment not found' }, 404);
+  }
+  const record = await medicalRecordService.createMedicalRecord(c.env.DB, patientId, user.id, {
+    record_date: parsed.record_date,
+    reason: parsed.reason,
+    appointment_id: parsed.appointment_id ?? null,
+    examination: parsed.examination ?? null,
+    diagnosis: parsed.diagnosis ?? null,
+    treatment: parsed.treatment ?? null,
+    clinical_notes: parsed.clinical_notes ?? null,
+    follow_up: parsed.follow_up ?? null,
+    follow_up_date: parsed.follow_up_date ?? null,
+  });
+  await logAudit(c.env.DB, { userId: user.id, action: 'medical_record.created', entityType: 'medical_record', entityId: record.id });
+  return c.json({ record }, 201);
+});
+
+app.get('/medical-records/:id', requireAuth, clinicalRoles, async (c) => {
+  if (!uuidSchema.safeParse(c.req.param('id')).success) return c.json({ error: 'Invalid medical record id' }, 400);
+  const user = c.get('user');
+  const record = await medicalRecordService.getMedicalRecordById(c.env.DB, c.req.param('id'), { userId: user.id, isDoctor: user.role === 'doctor' });
+  if (!record) return c.json({ error: 'Medical record not found' }, 404);
+  await logAudit(c.env.DB, { userId: user.id, action: 'medical_record.viewed', entityType: 'medical_record', entityId: record.id });
+  return c.json({ record });
+});
+
+app.patch('/medical-records/:id', requireAuth, clinicalRoles, async (c) => {
+  if (!uuidSchema.safeParse(c.req.param('id')).success) return c.json({ error: 'Invalid medical record id' }, 400);
+  const parsed = await parseJsonBody(c, updateMedicalRecordSchema);
+  if (parsed instanceof Response) return parsed;
+  const user = c.get('user');
+  const existing = await medicalRecordService.getMedicalRecordById(c.env.DB, c.req.param('id'), { userId: user.id, isDoctor: user.role === 'doctor' });
+  if (!existing) return c.json({ error: 'Medical record not found' }, 404);
+  if (parsed.appointment_id) {
+    const appointment = await appointmentService.getAppointmentById(c.env.DB, parsed.appointment_id);
+    if (!appointment || appointment.patient_id !== existing.patient_id) return c.json({ error: 'Appointment not found' }, 404);
+    if (user.role === 'doctor' && appointment.doctor_id !== user.id) return c.json({ error: 'Appointment not found' }, 404);
+  }
+  const record = await medicalRecordService.updateMedicalRecord(c.env.DB, existing.id, parsed);
+  await logAudit(c.env.DB, { userId: user.id, action: 'medical_record.updated', entityType: 'medical_record', entityId: existing.id });
+  return c.json({ record });
+});
+
 app.get('/appointments/:id', requireAuth, async (c) => {
   const appointment = await appointmentService.getAppointmentById(c.env.DB, c.req.param('id'));
   if (!appointment) return c.json({ error: 'Appointment not found' }, 404);
   if (c.get('user').role === 'doctor' && appointment.doctor_id !== c.get('user').id) return c.json({ error: 'Appointment not found' }, 404);
-  return c.json({ appointment });
+  const user = c.get('user');
+  const record = await medicalRecordService.getMedicalRecordForAppointment(c.env.DB, appointment.id, { userId: user.id, isDoctor: user.role === 'doctor' });
+  return c.json({ appointment, medical_record: record });
 });
 
 app.get('/calendar', requireAuth, async (c) => {

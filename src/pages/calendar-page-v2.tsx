@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Edit3, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit3, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { apiRequest, useAuth } from '@/lib/auth-context';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ type Appointment = {
 };
 
 type Person = { id: string; full_name?: string; name?: string };
+type MedicalRecord = { id: string };
 
 const fields = (
   patients: Person[],
@@ -65,6 +67,7 @@ export function CalendarPageV2() {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState<Appointment | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [doctorFilter, setDoctorFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [patientQuery, setPatientQuery] = useState('');
@@ -114,6 +117,16 @@ export function CalendarPageV2() {
       setDoctors(d.doctors);
     }).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!selected) {
+      setSelectedRecord(null);
+      return;
+    }
+    apiRequest<{ medical_record: MedicalRecord | null }>(`/api/appointments/${selected.id}`)
+      .then((result) => setSelectedRecord(result.medical_record))
+      .catch(() => setSelectedRecord(null));
+  }, [selected]);
 
   const patientName = (id: string) => patients.find((item) => item.id === id)?.full_name ?? t('appointments.patient');
   const doctorName = (id: string) => doctors.find((item) => item.id === id)?.full_name ?? doctors.find((item) => item.id === id)?.name ?? t('appointments.doctor');
@@ -342,6 +355,11 @@ export function CalendarPageV2() {
             <p className="text-sm text-muted-foreground">{doctorName(selected.doctor_id)}</p>
             <p className="text-sm">{selected.reason ?? t('common.notProvided')}</p>
             <div className="flex flex-wrap gap-2">
+              {selectedRecord ? (
+                <Link to={`/patients/${selected.patient_id}?tab=medicalRecords&recordId=${selectedRecord.id}`}><Button size="sm" variant="outline">{t('medicalRecords.view')}</Button></Link>
+              ) : canAddClinicalRecord(user?.role) ? (
+                <Link to={`/patients/${selected.patient_id}?tab=medicalRecords&appointmentId=${selected.id}`}><Button size="sm" variant="outline"><Plus size={14} />{t('medicalRecords.create')}</Button></Link>
+              ) : null}
               {canEdit && selected.status !== 'cancelled' && (
                 <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
                   <Edit3 size={14} />
@@ -390,4 +408,8 @@ export function CalendarPageV2() {
       )}
     </div>
   );
+}
+
+function canAddClinicalRecord(role: string | undefined) {
+  return role === 'admin' || role === 'staff' || role === 'doctor';
 }

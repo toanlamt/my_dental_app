@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Edit3, Plus, UserRound } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiRequest, useAuth } from '@/lib/auth-context';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,24 @@ type Appointment = {
   doctor_id: string;
   status: string;
   reason: string | null;
+};
+
+type MedicalRecord = {
+  id: string;
+  appointment_id: string | null;
+  author_id: string;
+  author_name?: string;
+  appointment_start_at?: string | null;
+  record_date: string;
+  reason: string;
+  examination: string | null;
+  diagnosis: string | null;
+  treatment: string | null;
+  clinical_notes: string | null;
+  follow_up: string | null;
+  follow_up_date: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 const editFields = (t: (key: string, options?: Record<string, unknown>) => string): ModalField[] => [
@@ -58,6 +76,18 @@ const noteFields = (t: (key: string, options?: Record<string, unknown>) => strin
   },
 ];
 
+const medicalRecordFields = (appointments: Appointment[], t: (key: string, options?: Record<string, unknown>) => string): ModalField[] => [
+  { name: 'record_date', label: t('medicalRecords.recordDate'), type: 'datetime-local', required: true },
+  { name: 'appointment_id', label: t('medicalRecords.appointment'), type: 'select', options: appointments.map((item) => ({ label: `${formatDateTime(item.start_at)} - ${item.reason ?? t('common.notProvided')}`, value: item.id })) },
+  { name: 'reason', label: t('medicalRecords.reason'), required: true },
+  { name: 'examination', label: t('medicalRecords.examination'), type: 'textarea' },
+  { name: 'diagnosis', label: t('medicalRecords.diagnosis'), type: 'textarea' },
+  { name: 'treatment', label: t('medicalRecords.treatment'), type: 'textarea' },
+  { name: 'clinical_notes', label: t('medicalRecords.clinicalNotes'), type: 'textarea' },
+  { name: 'follow_up', label: t('medicalRecords.followUp'), type: 'textarea' },
+  { name: 'follow_up_date', label: t('medicalRecords.followUpDate'), type: 'date' },
+];
+
 const statusVariant = (status: string) => {
   if (status === 'completed') return 'success' as const;
   if (status === 'cancelled') return 'danger' as const;
@@ -67,6 +97,7 @@ const statusVariant = (status: string) => {
 
 export function PatientDetailPageV2() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -74,14 +105,18 @@ export function PatientDetailPageV2() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'notes'>('overview');
+  const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'notes' | 'medicalRecords'>('overview');
+  const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   const canEdit = user?.role === 'admin' || user?.role === 'staff';
   const canAddNote = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'doctor';
+  const canEditRecord = canAddNote;
 
   const load = () => {
     if (!id) return;
@@ -89,12 +124,17 @@ export function PatientDetailPageV2() {
     setError('');
     Promise.all([
       apiRequest<{ patient: Patient; notes: Note[]; appointments: Appointment[] }>(`/api/patients/${id}`),
+      apiRequest<{ records: MedicalRecord[] }>(`/api/patients/${id}/medical-records?pageSize=20`),
       apiRequest<{ doctors: { id: string; full_name: string }[] }>('/api/doctors'),
     ])
-      .then(([result, doctorResult]) => {
+      .then(([result, recordResult, doctorResult]) => {
         setPatient(result.patient);
         setNotes(result.notes);
         setAppointments(result.appointments);
+        setRecords(recordResult.records);
+        const linkedRecord = searchParams.get('recordId');
+        if (linkedRecord) setSelectedRecord(recordResult.records.find((record) => record.id === linkedRecord) ?? null);
+        if (searchParams.get('appointmentId')) setRecordOpen(true);
         setDoctors(Object.fromEntries(doctorResult.doctors.map((doctor) => [doctor.id, doctor.full_name])));
       })
       .catch(() => {
@@ -107,6 +147,10 @@ export function PatientDetailPageV2() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'medicalRecords') setActiveTab('medicalRecords');
+  }, [searchParams]);
 
   if (loading) {
     return <p className="py-12 text-center text-sm text-muted-foreground">{t('patientDetail.unableToLoad')}</p>;
@@ -131,6 +175,21 @@ export function PatientDetailPageV2() {
       setActiveTab('notes');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('patientDetail.unableToAddNote'));
+    }
+  };
+
+  const saveRecord = async (values: Record<string, string>) => {
+    setError('');
+    try {
+      const payload = { ...values, record_date: new Date(values.record_date).toISOString(), appointment_id: values.appointment_id || null, follow_up_date: values.follow_up_date || null };
+      const url = selectedRecord ? `/api/medical-records/${selectedRecord.id}` : `/api/patients/${patient.id}/medical-records`;
+      await apiRequest(url, { method: selectedRecord ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+      setRecordOpen(false);
+      setSelectedRecord(null);
+      load();
+      setActiveTab('medicalRecords');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('medicalRecords.unableToSave'));
     }
   };
 
@@ -173,6 +232,9 @@ export function PatientDetailPageV2() {
         </Button>
         <Button variant={activeTab === 'notes' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('notes')}>
           {t('patientDetail.notes')}
+        </Button>
+        <Button variant={activeTab === 'medicalRecords' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('medicalRecords')}>
+          {t('medicalRecords.title')}
         </Button>
       </div>
 
@@ -261,6 +323,31 @@ export function PatientDetailPageV2() {
         </Card>
       )}
 
+      {activeTab === 'medicalRecords' && (
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <div><CardTitle>{t('medicalRecords.title')}</CardTitle><CardDescription>{t('medicalRecords.description')}</CardDescription></div>
+            {canEditRecord && <Button size="sm" onClick={() => { setSelectedRecord(null); setRecordOpen(true); }}><Plus size={15} />{t('medicalRecords.create')}</Button>}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {records.length === 0 ? <p className="text-sm text-muted-foreground">{t('medicalRecords.noRecords')}</p> : records.map((record) => (
+              <div key={record.id} className="rounded-md border p-4">
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start"><div><p className="font-medium">{formatDateTime(record.record_date)}</p><p className="text-sm text-muted-foreground">{record.reason}</p></div><p className="text-sm text-muted-foreground">{record.author_name ?? doctors[record.author_id] ?? t('medicalRecords.doctor')}</p></div>
+                {record.diagnosis && <p className="mt-2 text-sm"><span className="font-medium">{t('medicalRecords.diagnosis')}:</span> {record.diagnosis}</p>}
+                {record.treatment && <p className="text-sm"><span className="font-medium">{t('medicalRecords.treatment')}:</span> {record.treatment}</p>}
+                <div className="mt-3 flex gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedRecord(record)}>{t('medicalRecords.view')}</Button>{canEditRecord && <Button size="sm" variant="ghost" onClick={() => { setSelectedRecord(record); setRecordOpen(true); }}>{t('medicalRecords.edit')}</Button>}</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedRecord && !recordOpen && (
+        <Card><CardHeader><CardTitle>{t('medicalRecords.detail')}</CardTitle><CardDescription>{formatDateTime(selectedRecord.record_date)}</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
+          {[[t('medicalRecords.doctor'), selectedRecord.author_name ?? doctors[selectedRecord.author_id]], [t('medicalRecords.appointment'), selectedRecord.appointment_start_at ? formatDateTime(selectedRecord.appointment_start_at) : t('medicalRecords.noAppointment')], [t('medicalRecords.reason'), selectedRecord.reason], [t('medicalRecords.examination'), selectedRecord.examination], [t('medicalRecords.diagnosis'), selectedRecord.diagnosis], [t('medicalRecords.treatment'), selectedRecord.treatment], [t('medicalRecords.clinicalNotes'), selectedRecord.clinical_notes], [t('medicalRecords.followUp'), selectedRecord.follow_up], [t('medicalRecords.followUpDate'), selectedRecord.follow_up_date], [t('medicalRecords.created'), formatDateTime(selectedRecord.created_at)], [t('medicalRecords.updated'), formatDateTime(selectedRecord.updated_at)]].map(([label, value]) => <div key={label}><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-1 whitespace-pre-wrap text-sm">{value || t('common.notProvided')}</p></div>)}
+        </CardContent></Card>
+      )}
+
       <Modal
         title={t('patients.edit')}
         description={t('patientDetail.contact')}
@@ -278,6 +365,8 @@ export function PatientDetailPageV2() {
         onSubmit={update}
         submitLabel={t('patients.saveChanges')}
       />
+
+      <Modal title={selectedRecord ? t('medicalRecords.edit') : t('medicalRecords.create')} description={t('medicalRecords.description')} fields={medicalRecordFields(appointments, t)} open={recordOpen} onOpenChange={setRecordOpen} onSubmit={saveRecord} submitLabel={selectedRecord ? t('common.save') : t('common.create')} initialValues={selectedRecord ? { record_date: selectedRecord.record_date.slice(0, 16), appointment_id: selectedRecord.appointment_id ?? '', reason: selectedRecord.reason, examination: selectedRecord.examination ?? '', diagnosis: selectedRecord.diagnosis ?? '', treatment: selectedRecord.treatment ?? '', clinical_notes: selectedRecord.clinical_notes ?? '', follow_up: selectedRecord.follow_up ?? '', follow_up_date: selectedRecord.follow_up_date ?? '' } : { record_date: new Date().toISOString().slice(0, 16), appointment_id: searchParams.get('appointmentId') ?? '' }} />
 
       <Modal
         title={t('patientDetail.addNote')}

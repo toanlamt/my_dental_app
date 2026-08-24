@@ -108,8 +108,10 @@ pass and the feature actually works), not merely implemented. See
   server-side validation; audit logging for sensitive access/changes; localized EN/VI.
 - **Isolation requirements**: Must not require the dental chart (Phase 6) or documents
   (Phase 7) to function; must build on, not replace, `patient_notes`.
-- **Status**: `PLANNED` — only free-text `patient_notes` exist today; no structured medical
-  record schema or endpoints exist.
+- **Status**: `IN PROGRESS` — migration `0005_medical_records.sql`, role-protected paginated
+  endpoints, audit logging, patient timeline/detail/create/edit UI, and appointment integration
+  are implemented. Existing `patient_notes` remain separate. Build/lint/manual acceptance
+  verification is pending because npm is unavailable in the current environment.
 
 ## Phase 6 — Dental chart
 - **Objective**: Visual dental chart (tooth-level status/history) per patient.
