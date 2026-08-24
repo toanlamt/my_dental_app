@@ -17,6 +17,7 @@ import {
   updateAppointmentSchema,
   createMedicalRecordSchema,
   updateMedicalRecordSchema,
+  updateDentalChartSchema,
   parseJsonBody,
 } from '../lib/validation';
 import { toPublicUser, type AppointmentStatus, type AppointmentRequestStatus } from '../lib/types';
@@ -26,6 +27,7 @@ import * as appointmentService from '../services/appointment.service';
 import * as notificationService from '../services/notification.service';
 import * as appointmentRequestService from '../services/appointment-request.service';
 import * as medicalRecordService from '../services/medical-record.service';
+import * as dentalChartService from '../services/dental-chart.service';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>().basePath('/api');
 
@@ -318,6 +320,45 @@ app.patch('/medical-records/:id', requireAuth, clinicalRoles, async (c) => {
   const record = await medicalRecordService.updateMedicalRecord(c.env.DB, existing.id, parsed);
   await logAudit(c.env.DB, { userId: user.id, action: 'medical_record.updated', entityType: 'medical_record', entityId: existing.id });
   return c.json({ record });
+});
+
+// ---------------------------------------------------------------------------
+// Dental Chart
+// ---------------------------------------------------------------------------
+
+app.get('/patients/:patientId/dental-chart', requireAuth, clinicalRoles, async (c) => {
+  const patientId = c.req.param('patientId');
+  if (!uuidSchema.safeParse(patientId).success) return c.json({ error: 'Invalid patient id' }, 400);
+  const patient = await patientService.getPatientById(c.env.DB, patientId);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+  const user = c.get('user');
+  const teeth = await dentalChartService.getDentalChart(c.env.DB, patientId);
+  await logAudit(c.env.DB, { userId: user.id, action: 'dental_chart.viewed', entityType: 'dental_chart', entityId: patientId });
+  return c.json({ teeth });
+});
+
+app.patch('/patients/:patientId/dental-chart/:toothNumber', requireAuth, clinicalRoles, async (c) => {
+  const patientId = c.req.param('patientId');
+  const toothNumber = Number.parseInt(c.req.param('toothNumber'), 10);
+  
+  if (!uuidSchema.safeParse(patientId).success) return c.json({ error: 'Invalid patient id' }, 400);
+  if (Number.isNaN(toothNumber) || ![11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 41, 42, 43, 44, 45, 46, 47, 48].includes(toothNumber)) {
+    return c.json({ error: 'Invalid tooth number' }, 400);
+  }
+  
+  const patient = await patientService.getPatientById(c.env.DB, patientId);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+  
+  const parsed = await parseJsonBody(c, updateDentalChartSchema);
+  if (parsed instanceof Response) return parsed;
+  
+  // Validate tooth number matches
+  if (parsed.tooth_number !== toothNumber) return c.json({ error: 'Tooth number mismatch' }, 400);
+  
+  const user = c.get('user');
+  const entry = await dentalChartService.updateDentalChartEntry(c.env.DB, patientId, toothNumber, parsed, user.id);
+  await logAudit(c.env.DB, { userId: user.id, action: 'dental_chart.updated', entityType: 'dental_chart', entityId: patientId, details: { tooth: toothNumber, status: parsed.status } });
+  return c.json({ entry });
 });
 
 app.get('/appointments/:id', requireAuth, async (c) => {

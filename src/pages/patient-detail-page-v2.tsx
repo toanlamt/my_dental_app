@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState, Modal, type ModalField } from '@/components/modal';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { DentalChart } from '@/components/dental-chart';
 
 type Patient = {
   id: string;
@@ -106,7 +107,7 @@ export function PatientDetailPageV2() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Record<string, string>>({});
   const [records, setRecords] = useState<MedicalRecord[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'notes' | 'medicalRecords'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'notes' | 'medicalRecords' | 'dentalChart'>('overview');
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -236,6 +237,9 @@ export function PatientDetailPageV2() {
         <Button variant={activeTab === 'medicalRecords' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('medicalRecords')}>
           {t('medicalRecords.title')}
         </Button>
+        <Button variant={activeTab === 'dentalChart' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('dentalChart')}>
+          {t('dentalChart.title')}
+        </Button>
       </div>
 
       {activeTab === 'overview' && (
@@ -340,6 +344,10 @@ export function PatientDetailPageV2() {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {activeTab === 'dentalChart' && (
+        <DentalChart patientId={patient.id} />
       )}
 
       {selectedRecord && !recordOpen && (

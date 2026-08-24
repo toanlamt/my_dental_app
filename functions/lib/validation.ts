@@ -86,6 +86,16 @@ export const updateAppointmentSchema = z.object({
   status: z.enum(['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show']).optional(),
 });
 
+const toothStatusEnum = z.enum(['healthy', 'caries', 'filled', 'missing', 'crown', 'root_canal', 'implant', 'extraction_required']);
+
+const dentalChartFieldsSchema = z.object({
+  tooth_number: z.number().int().refine((n) => [11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 41, 42, 43, 44, 45, 46, 47, 48].includes(n), 'Invalid tooth number'),
+  status: toothStatusEnum,
+  notes: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const updateDentalChartSchema = dentalChartFieldsSchema;
+
 const publicServiceSlugs = ['general-dentistry', 'dental-cleaning', 'teeth-whitening', 'dental-implants', 'orthodontics', 'childrens-dentistry'] as const;
 
 export const createAppointmentRequestSchema = z.object({

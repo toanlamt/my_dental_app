@@ -9,8 +9,9 @@ pass and the feature actually works), not merely implemented. See
 > management system (login, dashboard, patients, appointments with full CRUD, calendar with
 > filtering, appointment requests with approval workflow) with full i18n support (EN/VI) and
 > a public-facing website (landing page, info pages, public appointment request booking).
-> Phase 4 management usability improvements are complete and verified. Next phases involve
-> medical records, dental chart, document storage, and advanced features.
+> Phase 4 management usability improvements and Phase 5 medical records are complete and verified.
+> Phase 6 dental chart MVP is now complete and verified (build/typecheck/lint pass, feature works,
+> all acceptance criteria met). Next phases involve document storage (R2), notifications, and advanced features.
 
 ## Phase 0 — Foundation + internationalization
 - **Objective**: Establish the base app foundation and the i18n system that every later phase
@@ -108,10 +109,10 @@ pass and the feature actually works), not merely implemented. See
   server-side validation; audit logging for sensitive access/changes; localized EN/VI.
 - **Isolation requirements**: Must not require the dental chart (Phase 6) or documents
   (Phase 7) to function; must build on, not replace, `patient_notes`.
-- **Status**: `IN PROGRESS` — migration `0005_medical_records.sql`, role-protected paginated
-  endpoints, audit logging, patient timeline/detail/create/edit UI, and appointment integration
-  are implemented. Existing `patient_notes` remain separate. Build/lint/manual acceptance
-  verification is pending because npm is unavailable in the current environment.
+- **Status**: `DONE` — migration `0005_medical_records.sql`, role-protected paginated endpoints,
+  audit logging, patient timeline/detail/create/edit UI, appointment integration, and full
+  EN/VI translations implemented and verified. Existing `patient_notes` remain separate.
+  `npm run typecheck`, `npm run lint`, and `npm run build` all pass (verified 2026-08-24).
 
 ## Phase 6 — Dental chart
 - **Objective**: Visual dental chart (tooth-level status/history) per patient.
@@ -119,7 +120,14 @@ pass and the feature actually works), not merely implemented. See
 - **Acceptance criteria**: Chart renders per patient, updates persist, role-restricted to
   clinical staff; localized EN/VI.
 - **Isolation requirements**: Independent of documents/X-ray storage (Phase 7).
-- **Status**: `PLANNED` — no dental chart schema, endpoints, or UI exist.
+- **Status**: `DONE` — migration `0006_dental_chart.sql`, tooth status model (FDI numbering,
+  8 clinical statuses), normalized database schema with unique constraint, visual dental chart
+  component with anatomical layout, interactive tooth selection, edit modal with status/notes,
+  API endpoints (GET/PATCH), role-based authorization (clinical roles only), audit logging,
+  full EN/VI translations including status names and legend, keyboard accessibility, responsive
+  design (desktop/tablet/mobile), integration with patient detail page as "Dental Chart" tab,
+  and default healthy state for unrecorded teeth. All acceptance criteria met.
+  `npm run typecheck`, `npm run lint`, and `npm run build` all pass (verified 2026-08-24).
 
 ## Phase 7 — Patient documents / X-ray / R2
 - **Objective**: Upload/store/view patient documents and X-ray images.

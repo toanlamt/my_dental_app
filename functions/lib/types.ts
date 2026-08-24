@@ -107,6 +107,19 @@ export type AuditLog = {
   created_at: string;
 };
 
+export type ToothStatus = 'healthy' | 'caries' | 'filled' | 'missing' | 'crown' | 'root_canal' | 'implant' | 'extraction_required';
+
+export type DentalChartEntry = {
+  id: string;
+  patient_id: string;
+  tooth_number: number;
+  status: ToothStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+};
+
 export function toPublicUser(user: User): PublicUser {
   const { password_hash: _password_hash, ...rest } = user;
   return { ...rest, email: user.username, name: user.full_name };

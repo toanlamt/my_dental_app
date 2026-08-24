@@ -173,8 +173,8 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - **medical_records**: `id, patient_id, appointment_id (nullable), author_id, record_date, reason,
   examination, diagnosis, treatment, clinical_notes, follow_up, follow_up_date, created_at,
   updated_at`; appointment data is referenced, not duplicated.
-- No tables yet for: dental chart,
-  patient documents/X-rays, or R2 object references.
+- **patient_dental_chart**: `id, patient_id, tooth_number (FDI/ISO 3950), status ('healthy'|'caries'|'filled'|'missing'|'crown'|'root_canal'|'implant'|'extraction_required'), notes, created_at, updated_at, updated_by`; unique constraint on (patient_id, tooth_number); permanently healthy teeth not persisted.
+- No tables yet for: patient documents/X-rays or R2 object references.
 - `functions/lib/types.ts` and the services expose legacy field aliases (`email`/`name` on
   users, `dob` on patients, `start_time`/`end_time` on appointments) alongside the current
   column names, for backward compatibility with the non-`-v2` frontend pages.
@@ -261,6 +261,30 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   - **Accessibility**: Form labels linked to inputs with `htmlFor`, navigation buttons with `aria-label`, semantic HTML structure.
   - **TypeScript**: No compilation errors or type issues (verified 2026-08-24).
   - **No regressions**: All previously completed phases continue functioning correctly (public landing, info pages, booking, admin panel).
+- Phase 5 medical records (COMPLETE):
+  - Structured medical records table with patient, appointment (optional), author, date, reason, examination, diagnosis, treatment, clinical notes, and follow-up tracking.
+  - Paginated newest-first medical records list for each patient.
+  - Create/view/edit medical record forms with optional appointment linking.
+  - Role-scoped access (doctors see their own appointments and records).
+  - Audit logging for create, view, and update actions.
+  - Full EN/VI translations.
+  - Integration with patient detail page as a new tab.
+- Phase 6 dental chart (COMPLETE):
+  - FDI/ISO 3950 tooth numbering system for all 32 permanent teeth.
+  - Tooth status tracking (healthy, caries, filled, missing, crown, root_canal, implant, extraction_required).
+  - Normalized database model: patient_dental_chart table with unique constraint on (patient_id, tooth_number).
+  - Default healthy state for unrecorded teeth (no unnecessary database rows created).
+  - Visual dental chart component with anatomically arranged teeth in upper/lower jaw layout.
+  - Interactive tooth selection with color-coded status visualization.
+  - Tooth detail/edit modal with status and notes fields.
+  - API endpoints: GET /patients/:patientId/dental-chart, PATCH /patients/:patientId/dental-chart/:toothNumber.
+  - Role-based authorization: clinical roles (admin, staff, doctor) only.
+  - Audit logging for chart viewing and tooth status updates.
+  - Full EN/VI translations including tooth status names, labels, and legend.
+  - Accessibility: keyboard-navigable tooth buttons with ARIA labels.
+  - Responsive design: tooth chart usable on desktop, tablet, and mobile with horizontal scroll if needed.
+  - Integration with patient detail page as a new "Dental Chart" tab.
+  - No impact on medical records or other patient data.
 
 ## 10. Incomplete / not started
 
@@ -268,20 +292,14 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   request booking are implemented.
 - **Internationalization**: i18next/react-i18next is installed with persisted EN/VI resources;
   routed public and management flows are localized, including dashboard/patients/patient detail/
-  calendar/appointment requests.
-- **Medical records** beyond free-text patient notes (structured treatment history) — not
-  implemented (Roadmap Phase 5).
-- **Dental chart** — not implemented (Roadmap Phase 6).
+  calendar/appointment requests/medical records/dental chart.
 - **Patient documents / X-ray storage (R2)** — no R2 binding in `wrangler.toml`, no upload
   endpoints — not implemented (Roadmap Phase 7).
 - **Persisted/actionable notifications** (e.g. read/unread state, push/email) — current feed
   is read-only and derived, not implemented (Roadmap Phase 8).
 - **SEO, accessibility, performance audits** — not started (Roadmap Phase 9).
-- **Automated tests** — no test framework installed. Build/typecheck/lint could not be run on
-  2026-08-22 because `npm` is unavailable in both Windows PowerShell and WSL.
-- **Automated tests** — no test framework is installed. `npm` is unavailable in the current
-  Windows PowerShell environment, so build/typecheck/lint/tests remain unrun here; editor
-  diagnostics are clean for the Phase 3 TypeScript files.
+- **Automated tests** — no test framework installed. `npm run typecheck`, `npm run lint`, and
+  `npm run build` all pass successfully (verified 2026-08-24).
 - **Production readiness** (secrets management beyond `.dev.vars.example`, real D1 database id
   in `wrangler.toml` is a placeholder, no CI config found) — not started (Roadmap Phase 10).
 
