@@ -1,89 +1,145 @@
 import type { Env } from '../lib/db';
-import type { PublicUser } from '../lib/types';
+import type { Notification, NotificationEntityType, NotificationType } from '../lib/types';
 
-export type Notification = {
-  id: string;
-  type: string;
-  message: string;
-  created_at: string;
+const RETENTION_DAYS = 90;
+
+type NotificationMetadata = Record<string, unknown> | null;
+
+export type NotificationListParams = {
+  page: number;
+  pageSize: number;
+  unreadOnly?: boolean;
 };
 
-type DoctorFeedRow = {
-  id: string;
-  status: string;
-  start_at: string;
-  created_at: string;
-  patient_name: string;
+export type NotificationListResult = {
+  notifications: Array<Omit<Notification, 'metadata'> & { metadata: NotificationMetadata }>;
+  total: number;
+  unread: number;
+  page: number;
+  pageSize: number;
 };
 
-type AuditFeedRow = {
-  id: string;
-  action: string;
-  entity_type: string;
-  entity_id: string | null;
-  created_at: string;
+export type CreateNotificationInput = {
+  userId: string;
+  type: NotificationType;
+  entityType?: NotificationEntityType | null;
+  entityId?: string | null;
+  metadata?: NotificationMetadata;
+  dedupeKey?: string | null;
 };
 
-/**
- * Notifications are derived read-only views over appointments/audit_logs
- * (no dedicated table) to keep the schema minimal for the MVP.
- */
-export async function getNotificationsForUser(db: Env['DB'], user: PublicUser): Promise<Notification[]> {
-  if (user.role === 'doctor') {
-    const { results } = await db
-      .prepare(
-        `SELECT a.id as id, a.status as status, a.start_at as start_at, a.created_at as created_at,
-                p.full_name as patient_name
-         FROM appointments a JOIN patients p ON p.id = a.patient_id
-         WHERE a.doctor_id = ? AND a.created_at >= datetime('now', '-3 days')
-         ORDER BY a.created_at DESC LIMIT 20`,
-      )
-      .bind(user.id)
-      .all<DoctorFeedRow>();
-
-    return results.map((row) => ({
-      id: row.id,
-      type: row.status === 'cancelled' ? 'appointment_cancelled' : 'appointment_scheduled',
-      message:
-        row.status === 'cancelled'
-          ? `Appointment with ${row.patient_name} was cancelled`
-          : `Appointment with ${row.patient_name} on ${row.start_at.slice(0, 16).replace('T', ' ')}`,
-      created_at: row.created_at,
-    }));
+function parseMetadata(raw: string | null): NotificationMetadata {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    return null;
+  } catch {
+    return null;
   }
+}
+
+async function cleanupOldNotifications(db: Env['DB']): Promise<void> {
+  try {
+    await db
+      .prepare(`DELETE FROM notifications WHERE created_at < datetime('now', '-${RETENTION_DAYS} days')`)
+      .run();
+  } catch (err) {
+    console.error('Failed to cleanup old notifications', err);
+  }
+}
+
+export async function createNotification(db: Env['DB'], input: CreateNotificationInput): Promise<void> {
+  await db
+    .prepare(
+      `INSERT OR IGNORE INTO notifications (id, user_id, type, entity_type, entity_id, metadata, dedupe_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      crypto.randomUUID(),
+      input.userId,
+      input.type,
+      input.entityType ?? null,
+      input.entityId ?? null,
+      input.metadata ? JSON.stringify(input.metadata) : null,
+      input.dedupeKey ?? null,
+    )
+    .run();
+
+  void cleanupOldNotifications(db);
+}
+
+export async function createNotifications(db: Env['DB'], inputs: CreateNotificationInput[]): Promise<void> {
+  for (const input of inputs) {
+    await createNotification(db, input);
+  }
+}
+
+export async function listNotificationsForUser(
+  db: Env['DB'],
+  userId: string,
+  params: NotificationListParams,
+): Promise<NotificationListResult> {
+  const page = Math.max(1, params.page);
+  const pageSize = Math.min(100, Math.max(1, params.pageSize));
+  const offset = (page - 1) * pageSize;
+  const unreadClause = params.unreadOnly ? " AND read_at IS NULL" : '';
 
   const { results } = await db
     .prepare(
-      `SELECT id, action, entity_type, entity_id, created_at FROM audit_logs
-       ORDER BY created_at DESC LIMIT 20`,
+      `SELECT id, user_id, type, entity_type, entity_id, metadata, read_at, created_at, dedupe_key
+       FROM notifications
+       WHERE user_id = ?${unreadClause}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
     )
-    .all<AuditFeedRow>();
+    .bind(userId, pageSize, offset)
+    .all<Notification>();
 
-  return results.map((row) => ({
-    id: row.id,
-    type: row.action,
-    message: describeAuditAction(row),
-    created_at: row.created_at,
-  }));
+  const totalRow = await db
+    .prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ?${unreadClause}`)
+    .bind(userId)
+    .first<{ count: number }>();
+  const unreadRow = await db
+    .prepare(`SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read_at IS NULL`)
+    .bind(userId)
+    .first<{ count: number }>();
+
+  return {
+    notifications: results.map((item) => ({ ...item, metadata: parseMetadata(item.metadata) })),
+    total: totalRow?.count ?? 0,
+    unread: unreadRow?.count ?? 0,
+    page,
+    pageSize,
+  };
 }
 
-function describeAuditAction(row: AuditFeedRow): string {
-  switch (row.action) {
-    case 'patient.created':
-      return 'A new patient was registered';
-    case 'patient.updated':
-      return 'Patient details were updated';
-    case 'patient_note.created':
-      return 'A new patient note was added';
-    case 'appointment.created':
-      return 'A new appointment was scheduled';
-    case 'appointment.updated':
-      return 'An appointment was updated';
-    case 'appointment.cancelled':
-      return 'An appointment was cancelled';
-    case 'user.created':
-      return 'A new staff account was created';
-    default:
-      return `${row.action} (${row.entity_type})`;
-  }
+export async function getUnreadCount(db: Env['DB'], userId: string): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read_at IS NULL')
+    .bind(userId)
+    .first<{ count: number }>();
+  return row?.count ?? 0;
+}
+
+export async function markNotificationAsRead(db: Env['DB'], userId: string, notificationId: string): Promise<boolean> {
+  const existing = await db
+    .prepare('SELECT id FROM notifications WHERE id = ? AND user_id = ?')
+    .bind(notificationId, userId)
+    .first<{ id: string }>();
+  if (!existing) return false;
+
+  await db
+    .prepare("UPDATE notifications SET read_at = datetime('now') WHERE id = ? AND user_id = ? AND read_at IS NULL")
+    .bind(notificationId, userId)
+    .run();
+  return true;
+}
+
+export async function markAllNotificationsAsRead(db: Env['DB'], userId: string): Promise<number> {
+  const result = await db
+    .prepare("UPDATE notifications SET read_at = datetime('now') WHERE user_id = ? AND read_at IS NULL")
+    .bind(userId)
+    .run();
+  return result.meta.changes ?? 0;
 }

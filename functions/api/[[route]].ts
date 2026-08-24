@@ -21,7 +21,7 @@ import {
   validateDocumentFile,
   parseJsonBody,
 } from '../lib/validation';
-import { toPublicUser, type AppointmentStatus, type AppointmentRequestStatus } from '../lib/types';
+import { toPublicUser, type AppointmentStatus, type AppointmentRequestStatus, type NotificationType } from '../lib/types';
 import * as userService from '../services/user.service';
 import * as patientService from '../services/patient.service';
 import * as appointmentService from '../services/appointment.service';
@@ -32,6 +32,22 @@ import * as dentalChartService from '../services/dental-chart.service';
 import * as documentService from '../services/document.service';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>().basePath('/api');
+
+async function createNotificationsSafely(db: Env['DB'], inputs: Array<{
+  userId: string;
+  type: NotificationType;
+  entityType?: 'appointment_request' | 'appointment' | 'patient' | 'system' | null;
+  entityId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  dedupeKey?: string | null;
+}>): Promise<void> {
+  try {
+    if (inputs.length === 0) return;
+    await notificationService.createNotifications(db, inputs);
+  } catch (err) {
+    console.error('Failed to create notifications', err);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Auth
@@ -121,6 +137,24 @@ app.post('/public/appointment-requests', async (c) => {
   try {
     const request = await appointmentRequestService.createAppointmentRequest(c.env.DB, parsed);
     await logAudit(c.env.DB, { userId: null, action: 'appointment_request.created', entityType: 'appointment_request', entityId: request.id });
+
+    const recipients = await userService.listActiveUsersByRoles(c.env.DB, ['admin', 'staff']);
+    await createNotificationsSafely(
+      c.env.DB,
+      recipients.map((recipient) => ({
+        userId: recipient.id,
+        type: 'appointment_request_created',
+        entityType: 'appointment_request',
+        entityId: request.id,
+        metadata: {
+          preferred_date: request.preferred_date,
+          preferred_time: request.preferred_time,
+          service_slug: request.service_slug,
+        },
+        dedupeKey: `appointment_request_created:${request.id}`,
+      })),
+    );
+
     return c.json({ request: { id: request.id, status: request.status, created_at: request.created_at } }, 201);
   } catch (err) {
     if (err instanceof Error && err.message === 'DUPLICATE_REQUEST') return c.json({ error: 'A similar request was recently received' }, 429);
@@ -550,6 +584,29 @@ app.get('/dashboard', requireAuth, async (c) => {
       console.error('Failed to load upcoming appointments:', err);
       upcoming = [];
     }
+
+    const upcomingWindowEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    const upcomingForNotifications = upcoming
+      .filter((item) => item.status === 'scheduled' || item.status === 'confirmed')
+      .filter((item) => item.start_at > now.toISOString() && item.start_at <= upcomingWindowEnd)
+      .slice(0, 20);
+
+    await createNotificationsSafely(
+      c.env.DB,
+      upcomingForNotifications.map((item) => ({
+        userId: user.id,
+        type: 'upcoming_appointment',
+        entityType: 'appointment',
+        entityId: item.id,
+        metadata: {
+          patient_id: item.patient_id,
+          doctor_id: item.doctor_id,
+          start_at: item.start_at,
+          status: item.status,
+        },
+        dedupeKey: `upcoming_appointment:${item.id}`,
+      })),
+    );
     
     let pendingRequests = 0;
     if (user.role !== 'doctor') {
@@ -679,6 +736,81 @@ app.patch('/appointments/:id', requireAuth, requireRole('admin', 'staff', 'docto
       entityType: 'appointment',
       entityId: appointment.id,
     });
+
+    const recipientUsers = await userService.listActiveUsersByRoles(c.env.DB, ['admin', 'staff']);
+    const recipientIds = new Set<string>(recipientUsers.map((item) => item.id));
+    recipientIds.add(appointment.doctor_id);
+    recipientIds.delete(user.id);
+
+    const baseMetadata = {
+      patient_id: appointment.patient_id,
+      doctor_id: appointment.doctor_id,
+      start_at: appointment.start_at,
+      end_at: appointment.end_at,
+      status: appointment.status,
+    };
+
+    const notificationsToCreate: Array<{
+      userId: string;
+      type: NotificationType;
+      entityType: 'appointment';
+      entityId: string;
+      metadata: Record<string, unknown>;
+      dedupeKey: string;
+    }> = [];
+
+    if (existing.status !== appointment.status) {
+      if (appointment.status === 'confirmed') {
+        for (const recipientId of recipientIds) {
+          notificationsToCreate.push({
+            userId: recipientId,
+            type: 'appointment_confirmed',
+            entityType: 'appointment',
+            entityId: appointment.id,
+            metadata: baseMetadata,
+            dedupeKey: `appointment_confirmed:${appointment.id}:${appointment.updated_at}`,
+          });
+        }
+      }
+      if (appointment.status === 'cancelled') {
+        for (const recipientId of recipientIds) {
+          notificationsToCreate.push({
+            userId: recipientId,
+            type: 'appointment_cancelled',
+            entityType: 'appointment',
+            entityId: appointment.id,
+            metadata: baseMetadata,
+            dedupeKey: `appointment_cancelled:${appointment.id}:${appointment.updated_at}`,
+          });
+        }
+      }
+    }
+
+    const wasRescheduled =
+      existing.doctor_id !== appointment.doctor_id ||
+      existing.start_at !== appointment.start_at ||
+      existing.end_at !== appointment.end_at;
+
+    if (wasRescheduled) {
+      for (const recipientId of recipientIds) {
+        notificationsToCreate.push({
+          userId: recipientId,
+          type: 'appointment_rescheduled',
+          entityType: 'appointment',
+          entityId: appointment.id,
+          metadata: {
+            ...baseMetadata,
+            previous_doctor_id: existing.doctor_id,
+            previous_start_at: existing.start_at,
+            previous_end_at: existing.end_at,
+          },
+          dedupeKey: `appointment_rescheduled:${appointment.id}:${appointment.updated_at}`,
+        });
+      }
+    }
+
+    await createNotificationsSafely(c.env.DB, notificationsToCreate);
+
     return c.json({ appointment });
   } catch (err) {
     if (err instanceof appointmentService.AppointmentConflictError) {
@@ -689,12 +821,42 @@ app.patch('/appointments/:id', requireAuth, requireRole('admin', 'staff', 'docto
 });
 
 // ---------------------------------------------------------------------------
-// Notifications (derived from appointments/audit_logs, no dedicated table)
+// Notifications (persistent in-app notifications)
 // ---------------------------------------------------------------------------
 
 app.get('/notifications', requireAuth, async (c) => {
-  const notifications = await notificationService.getNotificationsForUser(c.env.DB, c.get('user'));
-  return c.json({ notifications });
+  const user = c.get('user');
+  const page = Math.max(1, Number.parseInt(c.req.query('page') ?? '1', 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(c.req.query('pageSize') ?? '20', 10) || 20));
+  const filter = c.req.query('filter') === 'unread' ? 'unread' : 'all';
+
+  const result = await notificationService.listNotificationsForUser(c.env.DB, user.id, {
+    page,
+    pageSize,
+    unreadOnly: filter === 'unread',
+  });
+  return c.json(result);
+});
+
+app.get('/notifications/unread-count', requireAuth, async (c) => {
+  const unread = await notificationService.getUnreadCount(c.env.DB, c.get('user').id);
+  return c.json({ unread });
+});
+
+app.patch('/notifications/:id/read', requireAuth, async (c) => {
+  const id = c.req.param('id');
+  if (!uuidSchema.safeParse(id).success) return c.json({ error: 'Invalid notification id' }, 400);
+
+  const user = c.get('user');
+  const found = await notificationService.markNotificationAsRead(c.env.DB, user.id, id);
+  if (!found) return c.json({ error: 'Notification not found' }, 404);
+  return c.json({ ok: true });
+});
+
+app.post('/notifications/read-all', requireAuth, async (c) => {
+  const user = c.get('user');
+  const updated = await notificationService.markAllNotificationsAsRead(c.env.DB, user.id);
+  return c.json({ updated });
 });
 
 app.onError((err, c) => {

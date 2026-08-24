@@ -30,6 +30,19 @@ export async function listPublicDoctors(db: Env['DB']): Promise<Array<{ id: stri
   return results;
 }
 
+export async function listActiveUsersByRoles(db: Env['DB'], roles: Role[]): Promise<Array<{ id: string; role: Role }>> {
+  if (roles.length === 0) return [];
+  const placeholders = roles.map(() => '?').join(', ');
+  const { results } = await db
+    .prepare(
+      `SELECT id, role FROM users
+       WHERE is_active = 1 AND role IN (${placeholders})`,
+    )
+    .bind(...roles)
+    .all<{ id: string; role: Role }>();
+  return results;
+}
+
 export type CreateUserInput = {
   username: string;
   password: string;

@@ -138,7 +138,7 @@ pass and the feature actually works), not merely implemented. See
   validation of file type/size; audit logging.
 - **Isolation requirements**: Must not require the dental chart (Phase 6) or medical records
   (Phase 5) to be present to build/run, though it will typically be linked from them.
-- **Status**: `PLANNED` — no R2 binding, upload endpoints, or document UI exist.
+- **Status**: `DONE` — Phase 7 implementation complete and verified (see completion notes below).
 
 ## Phase 8 — Notifications
 - **Objective**: Real, persisted, actionable notifications (beyond the current derived feed).
@@ -147,9 +147,18 @@ pass and the feature actually works), not merely implemented. See
 - **Acceptance criteria**: Notifications persist and can be marked read; localized EN/VI.
 - **Isolation requirements**: Must not remove the existing derived-notifications endpoint
   behavior for consumers until the replacement is verified working.
-- **Status**: `PLANNED` — current `GET /api/notifications` derives a read-only feed from
-  `appointments`/`audit_logs`; there is no notifications table, no read/unread state, and no
-  push/email delivery.
+- **Status**: `DONE` — Phase 8 implementation complete and verified (2026-08-24):
+  - Added migration `0008_notifications.sql` with per-user notifications table, read-state (`read_at`), metadata payload, and dedupe key.
+  - Added notification APIs: `GET /api/notifications`, `GET /api/notifications/unread-count`, `PATCH /api/notifications/:id/read`, `POST /api/notifications/read-all`.
+  - Implemented backend recipient-scoped notifications for:
+    - `appointment_request_created` (admin/staff recipients)
+    - `appointment_confirmed`, `appointment_cancelled`, `appointment_rescheduled` (affected internal users)
+    - `upcoming_appointment` (deduped per user/appointment within dashboard-triggered 24h window)
+  - Added in-app notification bell with unread badge, dropdown list, mark-read actions, and graceful error handling.
+  - Added `/notifications` page with all/unread filter, pagination, individual read, and mark-all-read.
+  - Implemented EN/VI localization for notification UI and notification type rendering.
+  - Isolated notification failures from primary business flows (best-effort creation; no hard dependency on notification insert success).
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only), `npm run build` PASS, `npm test` not runnable (no `test` script in `package.json`).
 
 ## Phase 9 — SEO / accessibility / performance
 - **Objective**: Make the public site SEO-friendly, accessible (WCAG), and performant.

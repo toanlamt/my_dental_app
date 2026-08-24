@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, CalendarDays, ClipboardList, FileClock, LayoutDashboard, LogOut, Menu, Stethoscope, Users, X } from 'lucide-react';
+import { CalendarDays, ClipboardList, FileClock, LayoutDashboard, LogOut, Menu, Stethoscope, Users, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { NotificationBell } from '@/components/notification-bell';
 
 const navigation = [
   { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard },
   { key: 'patients', path: '/patients', icon: Users },
   { key: 'calendar', path: '/calendar', icon: CalendarDays },
   { key: 'appointmentRequests', path: '/appointment-requests', icon: FileClock },
+  { key: 'notifications', path: '/notifications', icon: ClipboardList },
 ];
 
 export function AppLayout() {
@@ -49,7 +51,7 @@ export function AppLayout() {
         <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b bg-white/90 px-4 backdrop-blur lg:px-8">
           <Button className="lg:hidden" variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label={t('navigation.open')}><Menu size={20} /></Button>
           <div className="hidden lg:block"><p className="text-sm font-medium text-slate-500">Wednesday, August 20, 2026</p></div>
-          <div className="ml-auto flex items-center gap-3"><LanguageSwitcher /><button className="relative rounded-md p-2 text-slate-500 hover:bg-slate-100" aria-label={t('navigation.notifications')}><Bell size={19} /><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-500" /></button><div className="h-7 w-px bg-border" /><span className="text-sm font-medium text-slate-700">{user?.full_name}</span></div>
+          <div className="ml-auto flex items-center gap-3"><LanguageSwitcher /><NotificationBell /><div className="h-7 w-px bg-border" /><span className="text-sm font-medium text-slate-700">{user?.full_name}</span></div>
         </header>
         <main className="mx-auto max-w-7xl p-4 lg:p-8"><Outlet /></main>
       </div>

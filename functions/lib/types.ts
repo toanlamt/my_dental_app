@@ -122,6 +122,27 @@ export type DentalChartEntry = {
 
 export type DocumentType = 'xray' | 'dental_image' | 'clinical_document' | 'other';
 
+export type NotificationType =
+  | 'appointment_request_created'
+  | 'appointment_confirmed'
+  | 'appointment_cancelled'
+  | 'appointment_rescheduled'
+  | 'upcoming_appointment';
+
+export type NotificationEntityType = 'appointment_request' | 'appointment' | 'patient' | 'system';
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  entity_type: NotificationEntityType | null;
+  entity_id: string | null;
+  metadata: string | null;
+  read_at: string | null;
+  created_at: string;
+  dedupe_key: string | null;
+};
+
 export type PatientDocument = {
   id: string;
   patient_id: string;

@@ -53,7 +53,7 @@ functions/
     user.service.ts         User lookups, doctor listing, user creation.
     patient.service.ts      Patient CRUD, search/pagination, notes.
     appointment.service.ts  Appointment CRUD, conflict detection, listing/filtering.
-    notification.service.ts Derives notifications from appointments/audit_logs (no dedicated table).
+    notification.service.ts Persistent notification CRUD, read/unread state, dedupe, retention cleanup.
     document.service.ts     Document upload/download/delete, R2 and D1 operations.
 
 migrations/
@@ -63,9 +63,11 @@ migrations/
                                        patients.dob->date_of_birth, appointments.start_time/end_time->start_at/end_at,
                                        drops patients.created_by, adds patients.medical_notes,
                                        adds updated_at columns, adds 'confirmed' appointment status.
+  0004_appointment_requests.sql         Public appointment_requests table and indexes.
   0005_medical_records.sql              Structured medical records table and patient/appointment/date indexes.
   0006_dental_chart.sql                 Dental chart table for tooth-level status tracking.
   0007_patient_documents.sql            Patient documents metadata table (R2 object references).
+  0008_notifications.sql                Per-user in-app notifications with read_at and dedupe key.
 
 src/
   main.tsx               Entry point — renders AppRouter (NOT App.tsx).
@@ -130,6 +132,8 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
 | `/patients`       | `PatientsPageV2`                | Yes |
 | `/patients/:id`   | `PatientDetailPageV2`           | Yes |
 | `/calendar`       | `CalendarPageV2`                | Yes |
+| `/appointment-requests` | `AppointmentRequestsPage` | Yes |
+| `/notifications`  | `NotificationsPage`             | Yes |
 | `*`               | redirect to `/`                | — |
 
 The Phase 1 landing page and Phase 2 public information pages are static and do not call the
@@ -163,7 +167,10 @@ through to the home redirect. Internal routes remain protected.
 | PATCH `/appointments/:id`           | requireAuth + role `admin,staff,doctor` | Update/cancel appointment (doctors limited to status only). |
 | GET `/calendar`                    | requireAuth                    | Appointments in a date range (doctor scoped). |
 | GET `/dashboard`                   | requireAuth                    | Today's summary counts + upcoming appointments. |
-| GET `/notifications`               | requireAuth                    | Derived notifications (from appointments/audit_logs). |
+| GET `/notifications`               | requireAuth                    | Paginated per-user notifications (`filter=all|unread`). |
+| GET `/notifications/unread-count`  | requireAuth                    | Unread count for current user. |
+| PATCH `/notifications/:id/read`    | requireAuth                    | Mark one notification as read (owner only). |
+| POST `/notifications/read-all`     | requireAuth                    | Mark all current user's notifications as read. |
 
 All handlers validate input with `zod` schemas via `parseJsonBody` and write relevant actions
 via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 500 JSON).
@@ -175,7 +182,7 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - **appointments**: `id, patient_id, doctor_id, start_at, end_at, status ('scheduled'|'confirmed'|'completed'|'cancelled'|'no_show'), reason, notes, created_at, updated_at`.
 - **patient_notes**: `id, patient_id, author_id, note, created_at, updated_at`.
 - **audit_logs**: `id, user_id, action, entity_type, entity_id, details (JSON text), created_at`.
-- No dedicated notifications table (derived from `appointments` + `audit_logs`).
+- **notifications**: `id, user_id, type, entity_type, entity_id, metadata (JSON text), read_at, created_at, dedupe_key`; includes indexes for user timeline/unread queries and partial unique dedupe index `(user_id, dedupe_key)`.
 - **medical_records**: `id, patient_id, appointment_id (nullable), author_id, record_date, reason,
   examination, diagnosis, treatment, clinical_notes, follow_up, follow_up_date, created_at,
   updated_at`; appointment data is referenced, not duplicated.
@@ -225,8 +232,13 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - Appointment management: create/update/cancel with per-doctor double-booking conflict
   detection, list/filter by date range/doctor/status, "today" endpoint, calendar view.
 - Dashboard summary (today's appointment counts by status + upcoming list).
-- Notifications feed derived from recent appointments (per doctor) or recent audit log entries
-  (for admin/staff) — read-only, no persistence/dismissal.
+- Phase 8 in-app notifications (COMPLETE):
+  - Persistent per-user notifications in D1 with `read_at` tracking.
+  - Event generation for appointment requests, appointment confirmed/cancelled/rescheduled updates, and deduped upcoming appointments (24-hour window when dashboard loads).
+  - Notification API for list, unread count, individual read, and mark-all-read.
+  - Notification bell dropdown with unread badge and recent feed.
+  - Dedicated `/notifications` page with all/unread filter and pagination.
+  - EN/VI localized notification titles/messages rendered at presentation time from language-neutral notification types + metadata.
 - Audit logging for auth, patient, note, appointment, and user-creation actions.
 - Basic responsive app shell (collapsible sidebar nav) for the management system.
 - Public Phase 1 landing page with static marketing data, responsive public layout, EN/VI copy,
@@ -298,7 +310,7 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   routed public and management flows are localized, including dashboard/patients/patient detail/
   calendar/appointment requests/medical records/dental chart.
   endpoints — not implemented (Roadmap Phase 7).
-  is read-only and derived, not implemented (Roadmap Phase 8).
+  is implemented with persistent D1 notifications, read/unread state, and localized UI.
   `npm run build` all pass successfully (verified 2026-08-24).
   in `wrangler.toml` is a placeholder, no CI config found) — not started (Roadmap Phase 10).
 
@@ -306,8 +318,8 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 
 - `wrangler.toml`'s `database_id` is a placeholder (`REPLACE_WITH_YOUR_D1_DATABASE_ID`) — must
   be set per environment before deploying.
-- Notifications have no dedicated table by deliberate design (kept minimal for the MVP); if a
-  future phase needs read/unread state or delivery, this will likely need a real table.
+- Notification retention uses best-effort cleanup in the notification service (delete records older
+  than 90 days) because no scheduled cleanup cron is configured yet.
 - Two generations of frontend page components exist per management screen (`-v2` and legacy
   non-`-v2`); only `-v2` is routed. The legacy files and the default Vite `App.tsx`/`App.css`
   template and its unused asset images (`react.svg`, `vite.svg`, `hero.png`) are dead code as of
