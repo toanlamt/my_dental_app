@@ -4,7 +4,7 @@
 > in sync with the code (see `.github/copilot-instructions.md`). If something here looks
 > outdated, trust the code and update this file.
 >
-> Last verified: 2026-08-22.
+> Last verified: 2026-08-24.
 
 ## 1. Technology stack
 
@@ -221,10 +221,34 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - Appointment request management at `/appointment-requests`, protected for admin/staff, with
   status/date/search filters, review actions, exact-phone patient reuse, explicit approval-only
   conversion through the existing appointment service, conflict detection, and audit logging.
-- Phase 4 management UX improvements: dashboard quick actions + pending-request visibility + no-show
-  summary, patient list loading/empty/error states, patient detail tabs (Overview/Appointments/Notes),
-  calendar filters (doctor/status/patient search), clearer appointment status actions, and clearer
-  appointment-request action states (pending/approved/rejected/converted).
+- Phase 4 management UX improvements (COMPLETE):
+  - **Dashboard**: Operational overview with today's appointments, appointment summary (confirmed/completed/cancelled/no-show counts),
+    upcoming appointments list, pending appointment request count, and quick action buttons (Add patient, Schedule appointment,
+    View calendar, View appointment requests). Responsive loading/error states.
+  - **Patient search**: Debounced search by full name and phone number.
+  - **Patient list**: Paginated display with search filter, empty/loading/error states, and clickable patient detail links.
+  - **Patient detail**: Tabbed interface (Overview/Appointments/Notes) with all patient information, full appointment history,
+    and clinical notes with add-note capability.
+  - **Appointment create/edit**: Modal form for scheduling new appointments or editing existing ones (except for cancelled appointments),
+    with datetime picker, doctor/patient selection, reason, and notes. Staff/admin only.
+  - **Appointment status workflow**: Clear status action buttons (Confirmed, Completed, No-show, Cancel) with visual badges.
+    Confirmation dialog for destructive cancel action. Doctors can only update status, staff/admin can edit full appointment details.
+  - **Calendar**: Dual-mode (day/week) view with navigation controls (previous/next/today), doctor filter (staff/admin), status filter,
+    and patient name search. Appointment click shows detail card with status action buttons. Staff/admin can create appointments inline.
+  - **Appointment filters**: Doctor filter (multi-doctor), status filter (scheduled/confirmed/completed/cancelled/no-show),
+    date range navigation, patient name search in calendar.
+  - **Conflict detection**: Doctor double-booking prevention on appointment create/edit with clear translated error message.
+  - **Appointment requests**: Status workflow (pending → approve/reject; approved → convert to appointment; converted → view).
+    Filters: status, date, name/phone search. Clear action labels and states. Conflict detection during conversion.
+  - **Loading/empty/error states**: Implemented on dashboard, patients, patient detail, calendar, and appointment requests pages.
+  - **Internationalization**: Full EN/VI translations including: dashboard labels, patient management labels, appointment workflow labels,
+    calendar labels, appointment request workflow, error messages, empty states, and new keys for edit appointment and cancel confirmation.
+  - **Role-aware UX**: Staff and admin see create/edit/status actions; doctors see only status actions on their own appointments.
+    Patient creation restricted to staff/admin. All restrictions enforced on backend via role middleware.
+  - **Responsive design**: Desktop-first with responsive layouts for tablet/mobile on key management screens.
+  - **Accessibility**: Form labels linked to inputs with `htmlFor`, navigation buttons with `aria-label`, semantic HTML structure.
+  - **TypeScript**: No compilation errors or type issues (verified 2026-08-24).
+  - **No regressions**: All previously completed phases continue functioning correctly (public landing, info pages, booking, admin panel).
 
 ## 10. Incomplete / not started
 

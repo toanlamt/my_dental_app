@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Edit3, Plus } from 'lucide-react';
 import { apiRequest, useAuth } from '@/lib/auth-context';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/button';
@@ -63,6 +63,7 @@ export function CalendarPageV2() {
   const [patients, setPatients] = useState<Person[]>([]);
   const [doctors, setDoctors] = useState<Person[]>([]);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [doctorFilter, setDoctorFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -71,6 +72,7 @@ export function CalendarPageV2() {
   const [loading, setLoading] = useState(true);
 
   const canSchedule = user?.role === 'admin' || user?.role === 'staff';
+  const canEdit = user?.role === 'admin' || user?.role === 'staff';
 
   const range = useMemo(() => {
     const start = new Date(date);
@@ -149,7 +151,7 @@ export function CalendarPageV2() {
 
   const updateStatus = async (status: string) => {
     if (!selected) return;
-    if (status === 'cancelled' && !window.confirm(t('appointmentRequests.rejectConfirm'))) return;
+    if (status === 'cancelled' && !window.confirm(t('appointments.cancelConfirm'))) return;
     setError('');
     try {
       await apiRequest(`/api/appointments/${selected.id}`, {
@@ -160,6 +162,34 @@ export function CalendarPageV2() {
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errors.requestFailed'));
+    }
+  };
+
+  const update = async (values: Record<string, string>) => {
+    if (!selected) return;
+    setError('');
+    const start = new Date(values.start_at);
+    const end = new Date(values.end_at);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      setError(t('appointments.endAfterStart'));
+      return;
+    }
+
+    try {
+      await apiRequest(`/api/appointments/${selected.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ...values, start_at: start.toISOString(), end_at: end.toISOString() }),
+      });
+      setEditOpen(false);
+      setSelected(null);
+      load();
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('Doctor already has an appointment')) {
+        setError(t('appointmentRequests.conflict'));
+        return;
+      }
+      setError(err instanceof Error ? err.message : t('appointments.unableToCreate'));
     }
   };
 
@@ -312,6 +342,12 @@ export function CalendarPageV2() {
             <p className="text-sm text-muted-foreground">{doctorName(selected.doctor_id)}</p>
             <p className="text-sm">{selected.reason ?? t('common.notProvided')}</p>
             <div className="flex flex-wrap gap-2">
+              {canEdit && selected.status !== 'cancelled' && (
+                <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+                  <Edit3 size={14} />
+                  {t('appointments.edit')}
+                </Button>
+              )}
               {['confirmed', 'completed', 'no_show', 'cancelled'].map((status) => (
                 <Button key={status} size="sm" variant={status === 'cancelled' ? 'danger' : 'outline'} onClick={() => updateStatus(status)}>
                   {t(`appointments.status.${status}`)}
@@ -333,6 +369,25 @@ export function CalendarPageV2() {
         onSubmit={create}
         submitLabel={t('common.create')}
       />
+
+      {selected && (
+        <Modal
+          title={t('appointments.edit')}
+          fields={fields(patients, doctors, t)}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSubmit={update}
+          submitLabel={t('common.save')}
+          initialValues={{
+            patient_id: selected.patient_id,
+            doctor_id: selected.doctor_id,
+            start_at: selected.start_at.slice(0, 16),
+            end_at: selected.end_at.slice(0, 16),
+            reason: selected.reason ?? '',
+            notes: selected.notes ?? '',
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -259,17 +259,59 @@ app.get('/calendar', requireAuth, async (c) => {
 });
 
 app.get('/dashboard', requireAuth, async (c) => {
-  const now = new Date();
-  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const dayEnd = new Date(dayStart.getTime() + 86400000);
-  const user = c.get('user');
-  const doctorId = user.role === 'doctor' ? user.id : undefined;
-  const appointments = await appointmentService.listAppointments(c.env.DB, { from: dayStart.toISOString(), to: dayEnd.toISOString(), doctorId });
-  const upcoming = await appointmentService.listAppointments(c.env.DB, { from: now.toISOString(), doctorId });
-  const pendingRequests = user.role === 'doctor'
-    ? 0
-    : ((await c.env.DB.prepare("SELECT COUNT(*) as count FROM appointment_requests WHERE status = 'pending'").first<{ count: number }>())?.count ?? 0);
-  return c.json({ summary: { today: appointments.length, confirmed: appointments.filter((item) => item.status === 'confirmed').length, completed: appointments.filter((item) => item.status === 'completed').length, cancelled: appointments.filter((item) => item.status === 'cancelled').length, no_show: appointments.filter((item) => item.status === 'no_show').length, pending_requests: pendingRequests }, today: appointments, upcoming: upcoming.filter((item) => item.status !== 'cancelled').slice(0, 8) });
+  try {
+    const now = new Date();
+    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const dayEnd = new Date(dayStart.getTime() + 86400000);
+    const user = c.get('user');
+    const doctorId = user.role === 'doctor' ? user.id : undefined;
+    
+    let appointments: any[] = [];
+    let upcoming: any[] = [];
+    
+    try {
+      appointments = await appointmentService.listAppointments(c.env.DB, { from: dayStart.toISOString(), to: dayEnd.toISOString(), doctorId });
+    } catch (err) {
+      console.error('Failed to load today appointments:', err);
+      appointments = [];
+    }
+    
+    try {
+      upcoming = await appointmentService.listAppointments(c.env.DB, { from: now.toISOString(), doctorId });
+    } catch (err) {
+      console.error('Failed to load upcoming appointments:', err);
+      upcoming = [];
+    }
+    
+    let pendingRequests = 0;
+    if (user.role !== 'doctor') {
+      try {
+        const { results } = await c.env.DB.prepare("SELECT COUNT(*) as count FROM appointment_requests WHERE status = 'pending'").all<{ count: number }>();
+        if (results && results.length > 0) {
+          pendingRequests = results[0].count || 0;
+        }
+      } catch (err) {
+        console.error('Failed to load pending requests:', err);
+        pendingRequests = 0;
+      }
+    }
+    
+    return c.json({ 
+      summary: { 
+        today: appointments.length, 
+        confirmed: appointments.filter((item) => item.status === 'confirmed').length, 
+        completed: appointments.filter((item) => item.status === 'completed').length, 
+        cancelled: appointments.filter((item) => item.status === 'cancelled').length, 
+        no_show: appointments.filter((item) => item.status === 'no_show').length, 
+        pending_requests: pendingRequests 
+      }, 
+      today: appointments, 
+      upcoming: upcoming.filter((item) => item.status !== 'cancelled').slice(0, 8) 
+    });
+  } catch (err) {
+    console.error('Dashboard endpoint error:', err);
+    throw err;
+  }
 });
 // ---------------------------------------------------------------------------
 // Appointments

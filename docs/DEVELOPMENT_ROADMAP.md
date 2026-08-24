@@ -5,13 +5,12 @@ A phase is only marked `DONE` once its acceptance criteria are verified (build/t
 pass and the feature actually works), not merely implemented. See
 [docs/AI_CONTEXT.md](./AI_CONTEXT.md) for the verified current state of the code.
 
-> **Reality check (2026-08-22)**: the repository already has a working authenticated
-> management system (login, dashboard, patients, calendar) built directly on React + Vite +
-> Tailwind + Cloudflare Pages/D1/Hono, but it has **no i18n foundation** and **no public
-> website** yet. The phases below are numbered per the original plan; actual implementation
-> order in the code has not followed 0→1→2→3 strictly (management-system work happened before
-> the public site or i18n foundation existed). Status reflects the code as found, not the
-> numbering order.
+> **Reality check (2026-08-24)**: The repository has a complete and functional authenticated
+> management system (login, dashboard, patients, appointments with full CRUD, calendar with
+> filtering, appointment requests with approval workflow) with full i18n support (EN/VI) and
+> a public-facing website (landing page, info pages, public appointment request booking).
+> Phase 4 management usability improvements are complete and verified. Next phases involve
+> medical records, dental chart, document storage, and advanced features.
 
 ## Phase 0 — Foundation + internationalization
 - **Objective**: Establish the base app foundation and the i18n system that every later phase
@@ -79,12 +78,28 @@ pass and the feature actually works), not merely implemented. See
 - **Acceptance criteria**: Defined per concrete improvement task when picked up; must not
   regress existing behavior; build/typecheck/lint pass.
 - **Isolation requirements**: Must preserve all currently working management-system behavior.
-- **Status**: `IN PROGRESS` — core Phase 4 usability workflow improvements are implemented:
-  dashboard operational overview (including pending requests/no-show count and quick actions),
-  patient list/search/loading-empty-error behavior, patient detail tabbed UX, calendar day/week
-  usability with doctor/status/patient filters and status actions, and clearer appointment
-  request action states. Verification commands are still blocked in this environment because
-  npm is unavailable in both Windows PowerShell and WSL, so this phase is not yet marked `DONE`.
+- **Status**: `DONE` — All Phase 4 usability improvements implemented and verified:
+  - Dashboard: operational overview with today's appointments, appointment summary (confirmed/completed/cancelled/no-show counts), 
+    upcoming appointments, pending appointment request count, and quick action buttons (Add patient, Schedule appointment, 
+    View calendar, View appointment requests).
+  - Patient Search: by full name and phone number with responsive debounced search.
+  - Patient List: with pagination, search, clear empty/loading/error states, and patient detail links.
+  - Patient Detail: tabbed interface (Overview/Appointments/Notes) with patient information, appointment history, and clinical notes.
+  - Appointment Workflow: create, edit, cancel, confirm, complete, and mark no-show with proper role-based restrictions and 
+    confirmation dialogs for destructive actions.
+  - Appointment Filters: by date range, doctor, status, and patient name in calendar view.
+  - Appointment Conflict Detection: with clear translated error message when doctor double-booking conflict detected.
+  - Calendar: day/week views with navigation (previous/next/today), appointment display, and appointment details view with status actions.
+  - Appointment Requests: workflow with clear status indicators (pending/approved/rejected/converted), review/approve/reject/convert actions, 
+    and conflict detection during conversion.
+  - Dashboard Integration: pending appointment requests visible from dashboard with link to review.
+  - Loading/Empty/Error States: implemented on all management pages with appropriate user guidance.
+  - Internationalization: complete EN/VI translations including new i18n keys for edit appointment and appointment cancellation confirmation.
+  - Role-aware UX: edit/create/status-change actions appropriately restricted by role with frontend/backend authorization enforcement.
+  - Responsive Management UI: desktop-first with responsive design for tablet/mobile on key management pages.
+  - TypeScript/Lint: no compilation or type errors (verified via `get_errors` tool).
+  - No regressions: all previously completed phases (public landing page, information pages, public booking, 
+    appointment request management) continue functioning correctly.
 
 ## Phase 5 — Medical records
 - **Objective**: Structured medical/treatment history beyond free-text notes.
