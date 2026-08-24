@@ -18,6 +18,7 @@ import {
   createMedicalRecordSchema,
   updateMedicalRecordSchema,
   updateDentalChartSchema,
+  validateDocumentFile,
   parseJsonBody,
 } from '../lib/validation';
 import { toPublicUser, type AppointmentStatus, type AppointmentRequestStatus } from '../lib/types';
@@ -28,6 +29,7 @@ import * as notificationService from '../services/notification.service';
 import * as appointmentRequestService from '../services/appointment-request.service';
 import * as medicalRecordService from '../services/medical-record.service';
 import * as dentalChartService from '../services/dental-chart.service';
+import * as documentService from '../services/document.service';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>().basePath('/api');
 
@@ -359,6 +361,151 @@ app.patch('/patients/:patientId/dental-chart/:toothNumber', requireAuth, clinica
   const entry = await dentalChartService.updateDentalChartEntry(c.env.DB, patientId, toothNumber, parsed, user.id);
   await logAudit(c.env.DB, { userId: user.id, action: 'dental_chart.updated', entityType: 'dental_chart', entityId: patientId, details: { tooth: toothNumber, status: parsed.status } });
   return c.json({ entry });
+});
+
+// ---------------------------------------------------------------------------
+// Patient Documents / X-rays
+// ---------------------------------------------------------------------------
+
+app.get('/patients/:patientId/documents', requireAuth, clinicalRoles, async (c) => {
+  const patientId = c.req.param('patientId');
+  if (!uuidSchema.safeParse(patientId).success) return c.json({ error: 'Invalid patient id' }, 400);
+  
+  const patient = await patientService.getPatientById(c.env.DB, patientId);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+  
+  const user = c.get('user');
+  const documents = await documentService.listDocuments(c.env, { patientId });
+  await logAudit(c.env.DB, { userId: user.id, action: 'patient_documents.viewed', entityType: 'patient_documents', entityId: patientId });
+  return c.json({ documents });
+});
+
+app.post('/patients/:patientId/documents', requireAuth, clinicalRoles, async (c) => {
+  const patientId = c.req.param('patientId');
+  if (!uuidSchema.safeParse(patientId).success) return c.json({ error: 'Invalid patient id' }, 400);
+  
+  const patient = await patientService.getPatientById(c.env.DB, patientId);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+
+  const user = c.get('user');
+
+  // Parse form data
+  const formData = await c.req.formData();
+  const file = formData.get('file') as File;
+  const documentType = formData.get('document_type') as string;
+  const description = formData.get('description') as string | null;
+
+  if (!file) return c.json({ error: 'File is required' }, 400);
+
+  // Validate document type
+  if (!['xray', 'dental_image', 'clinical_document', 'other'].includes(documentType)) {
+    return c.json({ error: 'Invalid document type' }, 400);
+  }
+
+  // Validate file
+  const fileValidation = validateDocumentFile({
+    name: file.name,
+    type: file.type,
+    size: file.size,
+  });
+
+  if (!fileValidation.valid) {
+    return c.json({ error: fileValidation.error }, 400);
+  }
+
+  try {
+    const fileBuffer = await file.arrayBuffer();
+    const document = await documentService.uploadDocument(c.env, {
+      patientId,
+      uploadedBy: user.id,
+      fileName: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+      documentType: documentType as 'xray' | 'dental_image' | 'clinical_document' | 'other',
+      description: description || null,
+      fileBuffer,
+    });
+
+    await logAudit(c.env.DB, {
+      userId: user.id,
+      action: 'patient_document.uploaded',
+      entityType: 'patient_document',
+      entityId: document.id,
+      details: { patientId, fileName: file.name, documentType },
+    });
+
+    return c.json({ document }, 201);
+  } catch (err) {
+    console.error('Document upload error:', err);
+    return c.json({ error: 'Failed to upload document' }, 500);
+  }
+});
+
+app.get('/documents/:id', requireAuth, clinicalRoles, async (c) => {
+  const documentId = c.req.param('id');
+  if (!uuidSchema.safeParse(documentId).success) return c.json({ error: 'Invalid document id' }, 400);
+
+  const user = c.get('user');
+  const document = await documentService.getDocumentById(c.env, documentId);
+  if (!document) return c.json({ error: 'Document not found' }, 404);
+
+  // Verify user has access to the patient
+  const patient = await patientService.getPatientById(c.env.DB, document.patient_id);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+
+  // Retrieve and stream the file
+  try {
+    const fileData = await documentService.getDocumentFile(c.env, document.object_key);
+    if (!fileData) return c.json({ error: 'Document file not found' }, 404);
+
+    await logAudit(c.env.DB, {
+      userId: user.id,
+      action: 'patient_document.accessed',
+      entityType: 'patient_document',
+      entityId: document.id,
+    });
+
+    const buffer = await fileData.object.arrayBuffer();
+    return new Response(buffer, {
+      headers: {
+        'Content-Type': document.mime_type,
+        'Content-Disposition': `attachment; filename="${document.file_name}"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    });
+  } catch (err) {
+    console.error('Document retrieval error:', err);
+    return c.json({ error: 'Failed to retrieve document' }, 500);
+  }
+});
+
+app.delete('/documents/:id', requireAuth, clinicalRoles, async (c) => {
+  const documentId = c.req.param('id');
+  if (!uuidSchema.safeParse(documentId).success) return c.json({ error: 'Invalid document id' }, 400);
+
+  const user = c.get('user');
+  const document = await documentService.getDocumentById(c.env, documentId);
+  if (!document) return c.json({ error: 'Document not found' }, 404);
+
+  // Verify user has access to the patient
+  const patient = await patientService.getPatientById(c.env.DB, document.patient_id);
+  if (!patient) return c.json({ error: 'Patient not found' }, 404);
+
+  try {
+    await documentService.deleteDocument(c.env, documentId);
+    await logAudit(c.env.DB, {
+      userId: user.id,
+      action: 'patient_document.deleted',
+      entityType: 'patient_document',
+      entityId: documentId,
+      details: { fileName: document.file_name },
+    });
+
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('Document deletion error:', err);
+    return c.json({ error: 'Failed to delete document' }, 500);
+  }
 });
 
 app.get('/appointments/:id', requireAuth, async (c) => {

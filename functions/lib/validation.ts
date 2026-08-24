@@ -119,6 +119,47 @@ export const convertAppointmentRequestSchema = z.object({
   doctor_id: z.string().uuid().optional(),
 });
 
+// Document validation
+const documentTypeEnum = z.enum(['xray', 'dental_image', 'clinical_document', 'other']);
+const supportedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const;
+const maxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+
+export const uploadDocumentSchema = z.object({
+  document_type: documentTypeEnum,
+  description: z.string().trim().max(500).optional().nullable(),
+});
+
+export const validateDocumentFile = (file: {
+  name: string;
+  type: string;
+  size: number;
+}): { valid: boolean; error?: string } => {
+  // Check file size
+  if (file.size > maxFileSizeBytes) {
+    return { valid: false, error: 'File is too large. Maximum size is 10 MB.' };
+  }
+
+  // Check MIME type
+  if (!(supportedMimeTypes as readonly string[]).includes(file.type)) {
+    return { valid: false, error: 'File type is not supported. Supported types: JPEG, PNG, WebP, PDF.' };
+  }
+
+  // Check extension (as an additional safeguard)
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+  if (!extension || !allowedExtensions.includes(extension)) {
+    return { valid: false, error: 'File extension is not allowed.' };
+  }
+
+  // Check for executable/script files
+  const forbiddenExtensions = ['exe', 'js', 'html', 'svg', 'sh', 'bat', 'cmd', 'com', 'pif', 'scr'];
+  if (extension && forbiddenExtensions.includes(extension)) {
+    return { valid: false, error: 'This file type is not allowed.' };
+  }
+
+  return { valid: true };
+};
+
 /** Parses and validates a JSON request body. Returns either the typed data or an error Response to return as-is. */
 export async function parseJsonBody<T>(c: Context, schema: z.ZodType<T>): Promise<T | Response> {
   let body: unknown;

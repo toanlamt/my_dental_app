@@ -8,6 +8,7 @@ import { EmptyState, Modal, type ModalField } from '@/components/modal';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { DentalChart } from '@/components/dental-chart';
+import { DocumentsTab } from '@/components/documents-tab';
 
 type Patient = {
   id: string;
@@ -47,6 +48,21 @@ type MedicalRecord = {
   follow_up_date: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type PatientDocument = {
+  id: string;
+  patient_id: string;
+  uploaded_by: string;
+  file_name: string;
+  object_key: string;
+  mime_type: string;
+  file_size: number;
+  document_type: 'xray' | 'dental_image' | 'clinical_document' | 'other';
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  uploaded_by_name?: string;
 };
 
 const editFields = (t: (key: string, options?: Record<string, unknown>) => string): ModalField[] => [
@@ -107,7 +123,9 @@ export function PatientDetailPageV2() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Record<string, string>>({});
   const [records, setRecords] = useState<MedicalRecord[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'notes' | 'medicalRecords' | 'dentalChart'>('overview');
+  const [documents, setDocuments] = useState<PatientDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'notes' | 'medicalRecords' | 'dentalChart' | 'documents'>('overview');
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -142,6 +160,22 @@ export function PatientDetailPageV2() {
         navigate('/patients');
       })
       .finally(() => setLoading(false));
+
+    loadDocuments(id);
+  };
+
+  const loadDocuments = (patientId: string) => {
+    setDocumentsLoading(true);
+    apiRequest<{ documents: PatientDocument[] }>(`/api/patients/${patientId}/documents`)
+      .then((result) => {
+        setDocuments(result.documents);
+      })
+      .catch((err) => {
+        console.error('Failed to load documents:', err);
+      })
+      .finally(() => {
+        setDocumentsLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -239,6 +273,9 @@ export function PatientDetailPageV2() {
         </Button>
         <Button variant={activeTab === 'dentalChart' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('dentalChart')}>
           {t('dentalChart.title')}
+        </Button>
+        <Button variant={activeTab === 'documents' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('documents')}>
+          {t('documents.title')}
         </Button>
       </div>
 
@@ -348,6 +385,16 @@ export function PatientDetailPageV2() {
 
       {activeTab === 'dentalChart' && (
         <DentalChart patientId={patient.id} />
+      )}
+
+      {activeTab === 'documents' && (
+        <DocumentsTab
+          patientId={patient.id}
+          documents={documents}
+          isLoading={documentsLoading}
+          canEdit={canEdit}
+          onDocumentsChange={() => id && loadDocuments(id)}
+        />
       )}
 
       {selectedRecord && !recordOpen && (

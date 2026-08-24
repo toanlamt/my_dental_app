@@ -120,6 +120,23 @@ export type DentalChartEntry = {
   updated_by: string | null;
 };
 
+export type DocumentType = 'xray' | 'dental_image' | 'clinical_document' | 'other';
+
+export type PatientDocument = {
+  id: string;
+  patient_id: string;
+  uploaded_by: string;
+  file_name: string;
+  object_key: string;
+  mime_type: string;
+  file_size: number;
+  document_type: DocumentType;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  uploaded_by_name?: string;
+};
+
 export function toPublicUser(user: User): PublicUser {
   const { password_hash: _password_hash, ...rest } = user;
   return { ...rest, email: user.username, name: user.full_name };

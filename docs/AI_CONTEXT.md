@@ -17,6 +17,8 @@
   catch-all route file at `functions/api/[[route]].ts`.
 - **Database**: Cloudflare D1 (SQLite), binding name `DB`, declared in `wrangler.toml`.
   Migrations live in `migrations/*.sql` and are applied with `wrangler d1 migrations apply`.
+- **Object Storage**: Cloudflare R2, binding name `DOCUMENTS` in `wrangler.toml`. Binary document
+  files (X-rays, images, PDFs) are stored in R2; metadata is in D1.
 - **Auth**: Stateless JWT session stored in an httpOnly cookie, signed/verified with `jose`
   (HS256). No server-side session store.
 - **Validation**: `zod` (`functions/lib/validation.ts`).
@@ -24,13 +26,12 @@
 - **Lint**: `oxlint` (`.oxlintrc.json`, plugins: react, typescript, oxc).
 - **Internationalization**: `i18next` and `react-i18next` are declared in `package.json`, with
   EN/VI resources under `src/i18n/locales`, English fallback, and `localStorage` persistence.
-  Shell, login, dashboard, patients, modal, and protected loading UI use translation keys;
-  calendar and patient detail still contain hardcoded UI strings.
+  All management UI and documents feature are fully translated.
 - **No testing framework is installed** (no Jest/Vitest/Playwright in `package.json`).
 
 Key scripts (`package.json`):
 - `npm run dev` — Vite dev server only (frontend, no API).
-- `npm run dev:full` — `wrangler pages dev` wrapping `npm run dev` (frontend + Pages Functions + D1 local).
+- `npm run dev:full` — `wrangler pages dev` wrapping `npm run dev` (frontend + Pages Functions + D1 + R2 local).
 - `npm run build` — `tsc -b && vite build`.
 - `npm run typecheck` — `tsc -b` (uses project references: app/node/functions tsconfigs).
 - `npm run lint` — `oxlint`.
@@ -42,17 +43,18 @@ Key scripts (`package.json`):
 functions/
   api/[[route]].ts        Single Hono app mounted at basePath '/api'; all routes defined here.
   lib/
-    db.ts                 Env type (DB: D1Database, JWT_SECRET: string).
+    db.ts                 Env type (DB: D1Database, JWT_SECRET: string, DOCUMENTS: R2Bucket).
     auth.ts               JWT session cookie creation/verification, requireAuth, requireRole middleware.
     password.ts            PBKDF2 hash/verify helpers.
-    validation.ts          zod schemas + parseJsonBody helper for all API input.
+    validation.ts          zod schemas + parseJsonBody helper for all API input. Includes document validation.
     audit.ts               logAudit() — best-effort insert into audit_logs, never throws.
-    types.ts               Shared DB row types (User, Patient, Appointment, PatientNote, AuditLog) + toPublicUser().
+    types.ts               Shared DB row types (User, Patient, Appointment, PatientNote, AuditLog, PatientDocument, DocumentType).
   services/
     user.service.ts         User lookups, doctor listing, user creation.
     patient.service.ts      Patient CRUD, search/pagination, notes.
     appointment.service.ts  Appointment CRUD, conflict detection, listing/filtering.
     notification.service.ts Derives notifications from appointments/audit_logs (no dedicated table).
+    document.service.ts     Document upload/download/delete, R2 and D1 operations.
 
 migrations/
   0001_init.sql                        Base schema (users.email/name, patients.dob, appointments.start_time/end_time).
@@ -62,6 +64,8 @@ migrations/
                                        drops patients.created_by, adds patients.medical_notes,
                                        adds updated_at columns, adds 'confirmed' appointment status.
   0005_medical_records.sql              Structured medical records table and patient/appointment/date indexes.
+  0006_dental_chart.sql                 Dental chart table for tooth-level status tracking.
+  0007_patient_documents.sql            Patient documents metadata table (R2 object references).
 
 src/
   main.tsx               Entry point — renders AppRouter (NOT App.tsx).
@@ -75,6 +79,8 @@ src/
   components/
     protected-route.tsx   Redirects to /login if not authenticated (via useAuth()).
     modal.tsx             Generic modal/dialog used by page forms.
+    documents-tab.tsx     Tabbed UI for document upload, preview, download, delete within patient detail.
+    dental-chart.tsx      Visual dental chart component with tooth-level status editor.
     ui/button.tsx, ui/primitives.tsx   Shared UI primitives (Card, Input, etc.) built on Radix + cva.
   layouts/app-layout.tsx  Sidebar + header shell for the authenticated app ("BrightSmile" branding).
   hooks/use-debounced-value.ts
@@ -82,7 +88,7 @@ src/
     login-page.tsx
     dashboard-page-v2.tsx, dashboard-page.tsx       (only -v2 is routed; non-v2 is unused/legacy)
     patients-page-v2.tsx, patients-page.tsx         (only -v2 is routed; non-v2 is unused/legacy)
-    patient-detail-page-v2.tsx, patient-detail-page.tsx (only -v2 is routed; non-v2 is unused/legacy)
+    patient-detail-page-v2.tsx, patient-detail-page.tsx (only -v2 is routed; non-v2 is unused/legacy; now includes Documents tab)
     calendar-page-v2.tsx, calendar-page.tsx         (only -v2 is routed; non-v2 is unused/legacy)
 ```
 
@@ -94,7 +100,7 @@ iteration and are currently unreferenced dead code. Confirm before deleting or m
 ## 3. Architecture
 
 - Cloudflare Pages project: static frontend (`dist/`, built by Vite) + Pages Functions backend.
-  `wrangler.toml` sets `pages_build_output_dir = "dist"` and binds D1 as `DB`.
+  `wrangler.toml` sets `pages_build_output_dir = "dist"` and binds D1 as `DB` and R2 as `DOCUMENTS`.
 - All API routes are defined in a single Hono app (`functions/api/[[route]].ts`) exported as
   the Pages Function `onRequest`, mounted at `/api/*`. Local dev proxies `/api` to
   `http://127.0.0.1:8788` (the `wrangler pages dev` port) — see `vite.config.ts`.
@@ -288,22 +294,15 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 
 ## 10. Incomplete / not started
 
-- **Public website**: Phase 1 landing page, Phase 2 information pages, and Phase 3 appointment
   request booking are implemented.
-- **Internationalization**: i18next/react-i18next is installed with persisted EN/VI resources;
   routed public and management flows are localized, including dashboard/patients/patient detail/
   calendar/appointment requests/medical records/dental chart.
-- **Patient documents / X-ray storage (R2)** — no R2 binding in `wrangler.toml`, no upload
   endpoints — not implemented (Roadmap Phase 7).
-- **Persisted/actionable notifications** (e.g. read/unread state, push/email) — current feed
   is read-only and derived, not implemented (Roadmap Phase 8).
-- **SEO, accessibility, performance audits** — not started (Roadmap Phase 9).
-- **Automated tests** — no test framework installed. `npm run typecheck`, `npm run lint`, and
   `npm run build` all pass successfully (verified 2026-08-24).
-- **Production readiness** (secrets management beyond `.dev.vars.example`, real D1 database id
   in `wrangler.toml` is a placeholder, no CI config found) — not started (Roadmap Phase 10).
 
-## 11. Known limitations / architectural decisions worth knowing
+- **Patient documents / X-ray storage (R2, Phase 7)** — Cloudflare R2 binding, secure file upload/download, D1 metadata tracking, full audit logging, EN/VI UI. COMPLETE (verified 2026-08-24).
 
 - `wrangler.toml`'s `database_id` is a placeholder (`REPLACE_WITH_YOUR_D1_DATABASE_ID`) — must
   be set per environment before deploying.
@@ -315,3 +314,10 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   this writing.
 - Session is JWT-in-cookie (stateless); there is no revocation mechanism other than the
   8-hour expiry and the `is_active` check on the user record.
+
+| GET `/patients/:patientId/documents` | requireAuth + role `admin,staff,doctor` | List documents for a patient. |
+| POST `/patients/:patientId/documents` | requireAuth + role `admin,staff,doctor` | Upload a document (multipart: file, document_type, description). |
+| GET `/documents/:id` | requireAuth + role `admin,staff,doctor` | Download a document file from R2. |
+| DELETE `/documents/:id` | requireAuth + role `admin,staff,doctor` | Delete a document from R2 and D1. |
+
+- **patient_documents**: `id, patient_id, uploaded_by, file_name, object_key, mime_type, file_size, document_type, description, created_at, updated_at`; document_type IN ('xray', 'dental_image', 'clinical_document', 'other'); object_key format: `patients/{patientId}/documents/{uuid}`; foreign keys to patients(id) and users(id).

@@ -174,3 +174,17 @@ pass and the feature actually works), not merely implemented. See
 - **Status**: `PLANNED` — not started. Current repo still ships a placeholder D1
   `database_id` and a `migrations/0002_seed.sql` with well-known demo credentials intended for
   local development only.
+
+- **Status**: `DONE` — Phase 7 implementation complete and verified (2026-08-24):
+  - Added R2 bucket binding to `wrangler.toml` (DOCUMENTS, my-dental-app-documents, jurisdiction: eu).
+  - Created D1 migration `0007_patient_documents.sql` with patient_documents table (11 columns: id, patient_id, uploaded_by, file_name, object_key, mime_type, file_size, document_type, description, created_at, updated_at).
+  - Implemented document service (functions/services/document.service.ts) with R2/D1 integration, custom UUID v4 generator (crypto.randomUUID not available in Cloudflare Workers), transactional consistency (if D1 fails after R2 upload, R2 object is deleted), and audit logging support.
+  - Added 4 API endpoints: GET /patients/:patientId/documents (list), POST /patients/:patientId/documents (upload), GET /documents/:id (download), DELETE /documents/:id (delete). All endpoints require clinical roles (admin, staff, doctor).
+  - Implemented file validation: JPEG/PNG/WebP/PDF only, max 10 MB file size, forbidden extensions (.exe, .js, .html, .svg, .sh, .bat, .cmd, .com, .pif, .scr).
+  - Created React DocumentsTab component with file upload form, metadata display grid, download/preview (MIME type based), and delete with confirmation.
+  - Added 27 new i18n keys in EN/VI for document types, upload labels, error messages (file too large, invalid type), and success notifications.
+  - Integrated Documents tab into patient detail page (PatientDetailPageV2) alongside Medical Records and Dental Chart tabs.
+  - Security: R2 objects (containing patient/clinical information) NOT publicly accessible. File objects keyed as `patients/{patientId}/documents/{uuid}`. User access to patient documents verified on every API call.
+  - Audit logging: document upload, access, and deletion all logged via logAudit (action: patient_document.uploaded/patient_document.accessed/patient_document.deleted).
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (no new warnings), `npm run build` PASS (Vite + TypeScript bundling success).
+  - Phase isolation verified: Phase 7 can run independently; phases 0-6 features unaffected and continue to work.
