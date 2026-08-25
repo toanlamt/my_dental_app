@@ -83,15 +83,37 @@ src/
     modal.tsx             Generic modal/dialog used by page forms.
     documents-tab.tsx     Tabbed UI for document upload, preview, download, delete within patient detail.
     dental-chart.tsx      Visual dental chart component with tooth-level status editor.
+    landing/              Landing page section components (refactored for maintainability; see below).
+      LandingPage.tsx     Main landing page orchestrator; imports and composes all section components.
+      HeroSection.tsx     Hero section (eyebrow, title, description, CTAs, hero image).
+      BenefitsBar.tsx     Benefits bar (4-item grid of benefit cards).
+      ServicesSection.tsx Service cards (6 services, icon-mapped, linked to service detail pages).
+      AboutSection.tsx    About section (text + image, CTA to /about).
+      DoctorsSection.tsx  Doctor cards (3 doctors, with styling from data).
+      WhyAndFaqSection.tsx Combined dark section with Why (checkmark list) and FAQ (expandable Q&A).
+      CtaSection.tsx      Yellow CTA banner ("Ready to book?").
+      TestimonialsSection.tsx Testimonial cards (quotes and attribution).
     ui/button.tsx, ui/primitives.tsx   Shared UI primitives (Card, Input, etc.) built on Radix + cva.
+  data/
+    landing/              Landing page data and configuration.
+      images.ts           Image URLs, alt text, dimensions, and loading hints for hero and about sections.
+      doctors.ts          Doctor card styling (background tones) mapped by slug.
+      index.ts            Re-exports for convenient access.
   layouts/app-layout.tsx  Sidebar + header shell for the authenticated app ("BrightSmile" branding).
+        public-layout.tsx  Header, footer, navigation for public pages (landing, services, about, etc.).
   hooks/use-debounced-value.ts
   pages/
+    landing-page.tsx      Route component; minimal wrapper around LandingPageComponent.
     login-page.tsx
     dashboard-page-v2.tsx, dashboard-page.tsx       (only -v2 is routed; non-v2 is unused/legacy)
     patients-page-v2.tsx, patients-page.tsx         (only -v2 is routed; non-v2 is unused/legacy)
     patient-detail-page-v2.tsx, patient-detail-page.tsx (only -v2 is routed; non-v2 is unused/legacy; now includes Documents tab)
     calendar-page-v2.tsx, calendar-page.tsx         (only -v2 is routed; non-v2 is unused/legacy)
+    public-pages.tsx      All public information pages (Services, ServiceDetail, About, Doctors, DoctorDetail, FAQ, Contact).
+    appointment-booking-page.tsx Public appointment request booking form.
+    appointment-requests-page.tsx (protected) Admin/staff review of public appointment requests.
+    notifications-page.tsx (protected) In-app notifications dashboard.
+    not-found-page.tsx    Translated 404 page for both public and authenticated routes.
 ```
 
 **Note on duplicate pages**: for each management page there are two implementations — a plain
@@ -335,6 +357,29 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   - Final audit and operations docs:
     - [docs/PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md)
     - [docs/PRODUCTION_OPERATIONS.md](./PRODUCTION_OPERATIONS.md)
+- **Landing page architecture refactor (maintainability pass, 2026-08-25)**:
+  - Refactored monolithic `src/pages/landing-page.tsx` (~300 lines) into focused section components:
+    - `src/components/landing/LandingPage.tsx` orchestrator
+    - `HeroSection.tsx`, `BenefitsBar.tsx`, `ServicesSection.tsx`, `AboutSection.tsx`, `DoctorsSection.tsx`,
+      `WhyAndFaqSection.tsx`, `CtaSection.tsx`, `TestimonialsSection.tsx`
+  - Extracted content and configuration data into semantic structures:
+    - `src/data/landing/images.ts` — centralized hero and about image metadata (URLs, alt text, dimensions, loading hints)
+    - `src/data/landing/doctors.ts` — doctor card styling mapped by slug (background tone)
+  - Improved maintainability and future AI assistance:
+    - Each section component has single, clear responsibility
+    - Content fetching and i18n logic localized within each component (no scattered `t()` calls)
+    - Icon-to-service mappings integrated into section components (no global repeated arrays)
+    - Hardcoded image URLs and styling moved to semantic data files
+    - Clear separation: layout/presentation in components, semantic data in files
+  - Preserved all existing behavior:
+    - Visual appearance unchanged
+    - Responsive mobile/tablet/desktop behavior preserved
+    - EN/VI internationalization intact (i18n keys unchanged, locales not modified)
+    - Route `/` unchanged, all links preserved
+    - SEO metadata via `usePageMeta` hook unchanged
+    - Public layout (header, footer, navigation) unchanged
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (no new warnings), `npm run build` PASS (1887 modules, 208KB bundle).
+  - Detailed architecture documented in [docs/LANDING_PAGE_ARCHITECTURE.md](./LANDING_PAGE_ARCHITECTURE.md).
 
 ## 10. Incomplete / not started
 
