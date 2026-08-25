@@ -33,6 +33,13 @@ import * as documentService from '../services/document.service';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>().basePath('/api');
 
+app.use('*', async (c, next) => {
+  await next();
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.header('X-Frame-Options', 'DENY');
+});
+
 async function createNotificationsSafely(db: Env['DB'], inputs: Array<{
   userId: string;
   type: NotificationType;
@@ -465,7 +472,7 @@ app.post('/patients/:patientId/documents', requireAuth, clinicalRoles, async (c)
       action: 'patient_document.uploaded',
       entityType: 'patient_document',
       entityId: document.id,
-      details: { patientId, fileName: file.name, documentType },
+      details: { patientId, fileName: document.file_name, documentType },
     });
 
     return c.json({ document }, 201);
@@ -500,10 +507,11 @@ app.get('/documents/:id', requireAuth, clinicalRoles, async (c) => {
     });
 
     const buffer = await fileData.object.arrayBuffer();
+    const safeDownloadName = document.file_name.replace(/["\\]/g, '_');
     return new Response(buffer, {
       headers: {
         'Content-Type': document.mime_type,
-        'Content-Disposition': `attachment; filename="${document.file_name}"`,
+        'Content-Disposition': `attachment; filename="${safeDownloadName}"; filename*=UTF-8''${encodeURIComponent(document.file_name)}`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });
@@ -709,6 +717,15 @@ app.patch('/appointments/:id', requireAuth, requireRole('admin', 'staff', 'docto
   const id = c.req.param('id');
   const existing = await appointmentService.getAppointmentById(c.env.DB, id);
   if (!existing) return c.json({ error: 'Appointment not found' }, 404);
+
+  if (
+    parsed.status &&
+    parsed.status !== existing.status &&
+    (existing.status === 'completed' || existing.status === 'cancelled')
+  ) {
+    return c.json({ error: `Cannot change status from ${existing.status}` }, 409);
+  }
+
   const nextStart = parsed.start_at ?? existing.start_at;
   const nextEnd = parsed.end_at ?? existing.end_at;
   if (new Date(nextEnd) <= new Date(nextStart)) return c.json({ error: 'end_at must be after start_at' }, 400);
@@ -863,6 +880,9 @@ app.post('/notifications/read-all', requireAuth, async (c) => {
 
 app.onError((err, c) => {
   console.error(err);
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.header('X-Frame-Options', 'DENY');
   return c.json({ error: 'Internal server error' }, 500);
 });
 

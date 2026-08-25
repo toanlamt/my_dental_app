@@ -188,43 +188,21 @@ pass and the feature actually works), not merely implemented. See
     `npm run build` PASS, `npm test` unavailable (no `test` script in `package.json`).
 
 ## Phase 10 — Production readiness audit
-  `wrangler.toml`), error handling/logging review, security review (OWASP top 10), backup/
-  migration strategy for D1, CI setup, monitoring.
-  consciously deferred with rationale; build/typecheck/lint/tests pass; no plaintext secrets or
-  demo credentials in a shipped/production configuration.
-  `database_id` and a `migrations/0002_seed.sql` with well-known demo credentials intended for
-  local development only.
- **Status**: `DONE` — Phase 10 production hardening audit complete (2026-08-25):
-   - **CRITICAL Fixes Implemented**:
-     - Fixed IDOR vulnerability: `/patients` list now requires `admin`/`staff` role (added role check)
-     - Fixed IDOR vulnerability: `/patients/:id` detail now requires `admin`/`staff` role (added role check)
-     - Fixed missing authorization: `/appointments/:id` now validates role (doctors: own appointments only; staff/admin: all appointments)
-     - Enhanced secrets documentation: `.dev.vars.example` now includes comprehensive JWT_SECRET, D1, R2, and Cloudflare secrets setup instructions
-     - Enhanced production config: `wrangler.toml` now includes detailed comments on D1 database setup, R2 bucket configuration, and secret management
-   - **HIGH Severity Fixes Implemented**:
-     - Strengthened phone validation: Replaced permissive regex with strict international format in both patient creation and appointment request booking
-   - **Comprehensive Audit Results**: 25 production-readiness areas audited (see [PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md)):
-     - All authentication/authorization/data isolation areas PASS
-     - Input validation, SQL security, R2 security, file uploads PASS
-     - Error handling, audit logging, cookies PASS
-     - MEDIUM findings noted: basic rate limiting (acceptable for MVP), filename PII (acceptable via auth-only access)
-   - **Verification**:
-     - `npm run typecheck` ✓ PASS (0 errors)
-     - `npm run lint` ✓ PASS (pre-existing warnings only)
-     - `npm run build` ✓ PASS (208KB main bundle, all optimized)
-   - **Production Prerequisites**: Replace D1 database_id, set JWT_SECRET via Cloudflare, verify R2 bucket private, test in production
-   - **Phase Isolation**: No feature changes; all Phases 0-9 functionality preserved and working.
-
-- **Status**: `DONE` — Phase 7 implementation complete and verified (2026-08-24):
-  - Added R2 bucket binding to `wrangler.toml` (DOCUMENTS, my-dental-app-documents, jurisdiction: eu).
-  - Created D1 migration `0007_patient_documents.sql` with patient_documents table (11 columns: id, patient_id, uploaded_by, file_name, object_key, mime_type, file_size, document_type, description, created_at, updated_at).
-  - Implemented document service (functions/services/document.service.ts) with R2/D1 integration, custom UUID v4 generator (crypto.randomUUID not available in Cloudflare Workers), transactional consistency (if D1 fails after R2 upload, R2 object is deleted), and audit logging support.
-  - Added 4 API endpoints: GET /patients/:patientId/documents (list), POST /patients/:patientId/documents (upload), GET /documents/:id (download), DELETE /documents/:id (delete). All endpoints require clinical roles (admin, staff, doctor).
-  - Implemented file validation: JPEG/PNG/WebP/PDF only, max 10 MB file size, forbidden extensions (.exe, .js, .html, .svg, .sh, .bat, .cmd, .com, .pif, .scr).
-  - Created React DocumentsTab component with file upload form, metadata display grid, download/preview (MIME type based), and delete with confirmation.
-  - Added 27 new i18n keys in EN/VI for document types, upload labels, error messages (file too large, invalid type), and success notifications.
-  - Integrated Documents tab into patient detail page (PatientDetailPageV2) alongside Medical Records and Dental Chart tabs.
-  - Security: R2 objects (containing patient/clinical information) NOT publicly accessible. File objects keyed as `patients/{patientId}/documents/{uuid}`. User access to patient documents verified on every API call.
-  - Audit logging: document upload, access, and deletion all logged via logAudit (action: patient_document.uploaded/patient_document.accessed/patient_document.deleted).
-  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (no new warnings), `npm run build` PASS (Vite + TypeScript bundling success).
-  - Phase isolation verified: Phase 7 can run independently; phases 0-6 features unaffected and continue to work.
+- **Objective**: Final audit before production deployment.
+- **Scope**: Secrets management, error handling/logging review, OWASP-focused security review,
+  backup/recovery operational clarity for D1 and R2, and production deployment prerequisites.
+- **Acceptance criteria**: Production concerns are explicitly reviewed and classified as PASS,
+  PASS WITH LIMITATIONS, BLOCKED, or FAIL; CRITICAL/HIGH issues are fixed or called out with
+  manual prerequisites; verification commands are executed.
+- **Isolation requirements**: Hardening only; preserve existing feature behavior.
+- **Status**: `IN PROGRESS` — final hardening implemented and verified locally (2026-08-25),
+  but production-readiness sign-off is blocked by manual production prerequisites:
+  - CRITICAL code/security fixes completed: IDOR route protection, appointment detail role checks,
+    appointment terminal status-transition guard, filename sanitization, and baseline API
+    security headers.
+  - Verification complete: `npm run typecheck` PASS, `npm run lint` PASS (warnings only),
+    `npm run build` PASS, `npm test` unavailable (no test script).
+  - Manual production prerequisite remains: `wrangler.toml` still contains placeholder
+    `database_id` and must be replaced with a real production D1 database ID.
+  - Operational runbook created: [docs/PRODUCTION_OPERATIONS.md](./PRODUCTION_OPERATIONS.md).
+  - Detailed final audit: [docs/PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md).

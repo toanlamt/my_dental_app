@@ -4,7 +4,7 @@
 > in sync with the code (see `.github/copilot-instructions.md`). If something here looks
 > outdated, trust the code and update this file.
 >
-> Last verified: 2026-08-25 (Phase 10 complete).
+> Last verified: 2026-08-25 (Phase 10 final hardening pass).
 
 ## 1. Technology stack
 
@@ -326,41 +326,27 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   - Ensured public/unknown routes no longer call private auth endpoints on first load.
   - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only, no new blocking
     errors), `npm run build` PASS, `npm test` not runnable (no `test` script in `package.json`).
-@@- Phase 10 production readiness audit (COMPLETE):
-@@  - **CRITICAL fixes**: Added role-based access control to `/patients` list (admin/staff only), `/patients/:id` detail (admin/staff only), and `/appointments/:id` (explicit role validation per appointment ownership).
-@@  - **HIGH fixes**: Strengthened phone validation regex to strict international format (`^(\+\d{1,3}[-.\s]?)?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$`) in both patient creation and appointment request booking.
-@@  - **Secrets hardening**: Enhanced `.dev.vars.example` with comprehensive JWT_SECRET and D1/R2 setup documentation; added detailed production setup instructions to `wrangler.toml`.
-@@  - **Comprehensive audit**: Verified 25 production-readiness areas (authentication, authorization, IDOR vulnerabilities, input validation, database security, R2 security, file uploads, error handling, audit logging, cookies, configuration, backup/recovery, etc.).
-@@  - **Verification**: `npm run typecheck` PASS (0 errors), `npm run lint` PASS (pre-existing warnings only), `npm run build` PASS (357ms, 208KB main bundle).
-@@  - Full audit report: [docs/PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md) (25 sections, 1500+ lines with evidence, fixes, status).
-@@  - Production prerequisites: Replace D1 database_id, set JWT_SECRET via Cloudflare, verify R2 bucket private, ensure seed data not applied to production.
+- Phase 10 production readiness hardening (IN PROGRESS, verified 2026-08-25):
+  - CRITICAL authorization fixes applied: `/patients`, `/patients/:id`, and `/appointments/:id` now enforce the intended role boundaries.
+  - Appointment integrity hardening: explicit terminal transition guard blocks status changes away from `completed` and `cancelled`.
+  - Document privacy hardening: R2 object key remains UUID-based; user-visible filenames are sanitized before metadata persistence and download headers.
+  - Baseline API security headers added: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`.
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only), `npm run build` PASS, `npm test` unavailable (no test script).
+  - Final audit and operations docs:
+    - [docs/PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md)
+    - [docs/PRODUCTION_OPERATIONS.md](./PRODUCTION_OPERATIONS.md)
 
 ## 10. Incomplete / not started
 
-  request booking are implemented.
-  routed public and management flows are localized, including dashboard/patients/patient detail/
-  calendar/appointment requests/medical records/dental chart.
-  endpoints — not implemented (Roadmap Phase 7).
-  is implemented with persistent D1 notifications, read/unread state, and localized UI.
-  `npm run build` all pass successfully (verified 2026-08-24).
-  in `wrangler.toml` is a placeholder, no CI config found) — not started (Roadmap Phase 10).
-
-- **Patient documents / X-ray storage (R2, Phase 7)** — Cloudflare R2 binding, secure file upload/download, D1 metadata tracking, full audit logging, EN/VI UI. COMPLETE (verified 2026-08-24).
-
-- `wrangler.toml`'s `database_id` is a placeholder (`REPLACE_WITH_YOUR_D1_DATABASE_ID`) — must
-  be set per environment before deploying.
-- Notification retention uses best-effort cleanup in the notification service (delete records older
-  than 90 days) because no scheduled cleanup cron is configured yet.
-- Two generations of frontend page components exist per management screen (`-v2` and legacy
-  non-`-v2`); only `-v2` is routed. The legacy files and the default Vite `App.tsx`/`App.css`
-  template and its unused asset images (`react.svg`, `vite.svg`, `hero.png`) are dead code as of
-  this writing.
-- Session is JWT-in-cookie (stateless); there is no revocation mechanism other than the
-  8-hour expiry and the `is_active` check on the user record.
-
-| GET `/patients/:patientId/documents` | requireAuth + role `admin,staff,doctor` | List documents for a patient. |
-| POST `/patients/:patientId/documents` | requireAuth + role `admin,staff,doctor` | Upload a document (multipart: file, document_type, description). |
-| GET `/documents/:id` | requireAuth + role `admin,staff,doctor` | Download a document file from R2. |
-| DELETE `/documents/:id` | requireAuth + role `admin,staff,doctor` | Delete a document from R2 and D1. |
-
-- **patient_documents**: `id, patient_id, uploaded_by, file_name, object_key, mime_type, file_size, document_type, description, created_at, updated_at`; document_type IN ('xray', 'dental_image', 'clinical_document', 'other'); object_key format: `patients/{patientId}/documents/{uuid}`; foreign keys to patients(id) and users(id).
+- Production deployment is not fully ready yet due to a CRITICAL manual prerequisite:
+  - `wrangler.toml` still contains placeholder `database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"`.
+  - A real production D1 database ID must be obtained from the correct Cloudflare account and configured before deploy.
+- Production secret setup cannot be verified from repository-only evidence:
+  - `JWT_SECRET` must be present in Cloudflare Pages production secrets.
+- Production R2 posture cannot be proven from repository-only evidence:
+  - Bucket `my-dental-app-documents` must exist and be private in the production account.
+- Backup/recovery automation is not implemented in this repository:
+  - No repo-defined automated D1 backup pipeline.
+  - No repo-defined automated R2 backup/versioning pipeline.
+- Notification retention is best-effort cleanup in service code (90 days), with no scheduled external job configured in-repo.
+- Session model remains stateless JWT-in-cookie, with revocation based on expiry and user `is_active` checks.

@@ -27,6 +27,29 @@ export type ListDocumentsParams = {
   patientId: string;
 };
 
+function sanitizeFileName(fileName: string): string {
+  const fallback = 'document';
+  const basename = (fileName.split(/[/\\]/).pop() ?? fallback).trim();
+  const withoutControls = Array.from(basename)
+    .filter((char) => char >= ' ' && char !== '\u007F')
+    .join('');
+  const strippedDangerous = withoutControls.replace(/[<>:"|?*]/g, '');
+  const normalized = strippedDangerous.replace(/[^A-Za-z0-9._()\- ]/g, '_').replace(/\s+/g, ' ').trim();
+
+  const dotIndex = normalized.lastIndexOf('.');
+  const rawStem = dotIndex > 0 ? normalized.slice(0, dotIndex) : normalized;
+  const rawExt = dotIndex > 0 ? normalized.slice(dotIndex + 1) : '';
+
+  const stem = rawStem.replace(/^\.+/, '').trim() || fallback;
+  const ext = rawExt.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10);
+
+  const maxTotalLength = 120;
+  const maxStemLength = ext ? maxTotalLength - (ext.length + 1) : maxTotalLength;
+  const boundedStem = stem.slice(0, Math.max(1, maxStemLength));
+
+  return ext ? `${boundedStem}.${ext}` : boundedStem;
+}
+
 /**
  * Generate a safe object key for R2 storage.
  * Format: patients/{patientId}/documents/{uuid}
@@ -43,12 +66,13 @@ export function generateObjectKey(patientId: string): string {
 export async function uploadDocument(env: Env, params: UploadDocumentParams): Promise<PatientDocument> {
   const documentId = randomUUID();
   const objectKey = generateObjectKey(params.patientId);
+  const safeFileName = sanitizeFileName(params.fileName);
 
   // Upload to R2
   const uploadedObject = await env.DOCUMENTS.put(objectKey, params.fileBuffer, {
     httpMetadata: {
       contentType: params.mimeType,
-      contentDisposition: `attachment; filename="${params.fileName}"`,
+      contentDisposition: `attachment; filename="${safeFileName}"`,
     },
     customMetadata: {
       patientId: params.patientId,
@@ -71,7 +95,7 @@ export async function uploadDocument(env: Env, params: UploadDocumentParams): Pr
         documentId,
         params.patientId,
         params.uploadedBy,
-        params.fileName,
+        safeFileName,
         objectKey,
         params.mimeType,
         params.fileSize,
@@ -90,7 +114,7 @@ export async function uploadDocument(env: Env, params: UploadDocumentParams): Pr
       id: documentId,
       patient_id: params.patientId,
       uploaded_by: params.uploadedBy,
-      file_name: params.fileName,
+      file_name: safeFileName,
       object_key: objectKey,
       mime_type: params.mimeType,
       file_size: params.fileSize,
