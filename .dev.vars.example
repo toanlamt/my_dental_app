@@ -1,2 +1,15 @@
 # Copy this file to .dev.vars for local `wrangler pages dev` (never commit .dev.vars).
+# IMPORTANT: Generate a unique random JWT_SECRET for both development AND production.
+# For production, use a cryptographically secure random string (min 32 characters).
 JWT_SECRET="replace-with-a-long-random-local-dev-secret"
+
+# D1 Database and R2 Bucket bindings are configured in wrangler.toml
+# For local development:
+#   - Ensure D1 database is initialized: npm run db:migrate:local
+#   - R2 bucket will work with local emulation via wrangler
+#
+# For production:
+#   - CRITICAL: Update wrangler.toml with production D1 database_id
+#   - CRITICAL: Ensure R2 bucket is created and permissions are correct
+#   - Ensure JWT_SECRET is set as a Cloudflare secret (not in .dev.vars)
+

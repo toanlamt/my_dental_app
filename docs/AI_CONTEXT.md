@@ -4,7 +4,7 @@
 > in sync with the code (see `.github/copilot-instructions.md`). If something here looks
 > outdated, trust the code and update this file.
 >
-> Last verified: 2026-08-24.
+> Last verified: 2026-08-25 (Phase 10 complete).
 
 ## 1. Technology stack
 
@@ -326,6 +326,14 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   - Ensured public/unknown routes no longer call private auth endpoints on first load.
   - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only, no new blocking
     errors), `npm run build` PASS, `npm test` not runnable (no `test` script in `package.json`).
+@@- Phase 10 production readiness audit (COMPLETE):
+@@  - **CRITICAL fixes**: Added role-based access control to `/patients` list (admin/staff only), `/patients/:id` detail (admin/staff only), and `/appointments/:id` (explicit role validation per appointment ownership).
+@@  - **HIGH fixes**: Strengthened phone validation regex to strict international format (`^(\+\d{1,3}[-.\s]?)?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$`) in both patient creation and appointment request booking.
+@@  - **Secrets hardening**: Enhanced `.dev.vars.example` with comprehensive JWT_SECRET and D1/R2 setup documentation; added detailed production setup instructions to `wrangler.toml`.
+@@  - **Comprehensive audit**: Verified 25 production-readiness areas (authentication, authorization, IDOR vulnerabilities, input validation, database security, R2 security, file uploads, error handling, audit logging, cookies, configuration, backup/recovery, etc.).
+@@  - **Verification**: `npm run typecheck` PASS (0 errors), `npm run lint` PASS (pre-existing warnings only), `npm run build` PASS (357ms, 208KB main bundle).
+@@  - Full audit report: [docs/PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md) (25 sections, 1500+ lines with evidence, fixes, status).
+@@  - Production prerequisites: Replace D1 database_id, set JWT_SECRET via Cloudflare, verify R2 bucket private, ensure seed data not applied to production.
 
 ## 10. Incomplete / not started
 

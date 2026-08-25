@@ -220,7 +220,7 @@ app.post('/appointment-requests/:id/convert', requireAuth, requireRole('admin', 
 // Patients
 // ---------------------------------------------------------------------------
 
-app.get('/patients', requireAuth, async (c) => {
+app.get('/patients', requireAuth, requireRole('admin', 'staff'), async (c) => {
   const user = c.get('user');
   const page = Math.max(1, Number.parseInt(c.req.query('page') ?? '1', 10) || 1);
   const pageSize = Math.min(100, Math.max(1, Number.parseInt(c.req.query('pageSize') ?? '20', 10) || 20));
@@ -240,7 +240,7 @@ app.post('/patients', requireAuth, requireRole('admin', 'staff'), async (c) => {
   return c.json({ patient }, 201);
 });
 
-app.get('/patients/:id', requireAuth, async (c) => {
+app.get('/patients/:id', requireAuth, requireRole('admin', 'staff'), async (c) => {
   const patient = await patientService.getPatientById(c.env.DB, c.req.param('id'));
   if (!patient) return c.json({ error: 'Patient not found' }, 404);
   const notes = await patientService.listPatientNotes(c.env.DB, patient.id);
@@ -545,8 +545,10 @@ app.delete('/documents/:id', requireAuth, clinicalRoles, async (c) => {
 app.get('/appointments/:id', requireAuth, async (c) => {
   const appointment = await appointmentService.getAppointmentById(c.env.DB, c.req.param('id'));
   if (!appointment) return c.json({ error: 'Appointment not found' }, 404);
-  if (c.get('user').role === 'doctor' && appointment.doctor_id !== c.get('user').id) return c.json({ error: 'Appointment not found' }, 404);
   const user = c.get('user');
+  // Only admin/staff can view any appointment; doctors can only view their own
+  if (user.role === 'doctor' && appointment.doctor_id !== user.id) return c.json({ error: 'Appointment not found' }, 404);
+  if (user.role !== 'admin' && user.role !== 'staff' && user.role !== 'doctor') return c.json({ error: 'Appointment not found' }, 404);
   const record = await medicalRecordService.getMedicalRecordForAppointment(c.env.DB, appointment.id, { userId: user.id, isDoctor: user.role === 'doctor' });
   return c.json({ appointment, medical_record: record });
 });

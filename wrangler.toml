@@ -2,13 +2,30 @@ name = "my-dental-app"
 compatibility_date = "2025-01-01"
 pages_build_output_dir = "dist"
 
+# D1 Database Configuration
+# CRITICAL FOR PRODUCTION:
+# 1. Create a D1 database in Cloudflare dashboard
+# 2. Replace REPLACE_WITH_YOUR_D1_DATABASE_ID with the actual database ID
+# 3. For production, use wrangler d1 migrations apply <db-name> --remote to apply migrations
 [[d1_databases]]
 binding = "DB"
 database_name = "my-dental-app-db"
 database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 migrations_dir = "migrations"
 
+# R2 Bucket Configuration
+# CRITICAL FOR PRODUCTION:
+# 1. Create an R2 bucket named "my-dental-app-documents" in Cloudflare dashboard
+# 2. Ensure the bucket is NOT publicly accessible (private access only)
+# 3. Files are accessed only through authenticated API endpoints
 [[r2_buckets]]
 binding = "DOCUMENTS"
 bucket_name = "my-dental-app-documents"
 jurisdiction = "eu"
+
+# Environment Secrets (CRITICAL FOR PRODUCTION):
+# Set the following secrets in Cloudflare Pages environment settings:
+# - JWT_SECRET: A cryptographically secure random string (min 32 characters)
+#   Generate with: openssl rand -base64 32
+# These secrets must NEVER be committed to version control or visible in code.
+# For local development, use .dev.vars file (also excluded from git).

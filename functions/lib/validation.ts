@@ -16,7 +16,7 @@ const patientFieldsSchema = z.object({
     .optional()
     .nullable(),
   gender: genderSchema.optional().nullable(),
-  phone: z.string().trim().max(30).optional().nullable(),
+  phone: z.string().trim().regex(/^(\+\d{1,3}[-.\s]?)?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/, 'Valid phone number is required').optional().nullable(),
   email: z.string().email().max(200).optional().nullable(),
   address: z.string().trim().max(500).optional().nullable(),
   medical_notes: z.string().trim().max(4000).optional().nullable(),
@@ -100,7 +100,7 @@ const publicServiceSlugs = ['general-dentistry', 'dental-cleaning', 'teeth-white
 
 export const createAppointmentRequestSchema = z.object({
   full_name: z.string().trim().min(1, 'Full name is required').max(200),
-  phone: z.string().trim().regex(/^\+?[0-9 ()-]{7,30}$/, 'Valid phone is required'),
+  phone: z.string().trim().regex(/^(\+\d{1,3}[-.\s]?)?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/, 'Valid phone number is required'),
   email: z.string().trim().email().max(200).optional().nullable(),
   service_slug: z.enum(publicServiceSlugs).optional().nullable(),
   doctor_id: z.string().uuid().optional().nullable(),
