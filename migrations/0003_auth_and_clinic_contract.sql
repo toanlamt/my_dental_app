@@ -25,7 +25,7 @@ CREATE TABLE appointments_v2 (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 INSERT INTO appointments_v2 (id, patient_id, doctor_id, start_at, end_at, status, reason, created_at, updated_at)
-SELECT id, patient_id, doctor_id, start_time, end_time, status, reason, created_at, updated_at
+SELECT id, patient_id, doctor_id, start_time, end_time, status, reason, created_at, created_at
 FROM appointments;
 DROP TABLE appointments;
 ALTER TABLE appointments_v2 RENAME TO appointments;

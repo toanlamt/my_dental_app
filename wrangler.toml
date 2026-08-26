@@ -9,8 +9,10 @@ pages_build_output_dir = "dist"
 # 3. For production, use wrangler d1 migrations apply <db-name> --remote to apply migrations
 [[d1_databases]]
 binding = "DB"
-database_name = "my-dental-app-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+#database_name = "my-dental-app-db"
+#database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_name = "my-dental-app-production"
+database_id = "54ea2caa-2076-4e2c-a8ff-7b39d3c01096"
 migrations_dir = "migrations"
 
 # R2 Bucket Configuration
