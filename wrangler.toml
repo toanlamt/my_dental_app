@@ -20,10 +20,10 @@ migrations_dir = "migrations"
 # 1. Create an R2 bucket named "my-dental-app-documents" in Cloudflare dashboard
 # 2. Ensure the bucket is NOT publicly accessible (private access only)
 # 3. Files are accessed only through authenticated API endpoints
-[[r2_buckets]]
-binding = "DOCUMENTS"
-bucket_name = "my-dental-app-documents"
-jurisdiction = "eu"
+#[[r2_buckets]]
+#binding = "DOCUMENTS"
+#bucket_name = "my-dental-app-documents"
+#jurisdiction = "eu"
 
 # Environment Secrets (CRITICAL FOR PRODUCTION):
 # Set the following secrets in Cloudflare Pages environment settings:
