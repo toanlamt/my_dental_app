@@ -223,7 +223,7 @@ export const landingImages = {
 **`src/data/landing/doctors.ts`**
 ```typescript
 export const doctorCardStyling = {
-  'alex-morgan': { bgTone: 'bg-[#d9e8df]' },
+  'ngoc-hieu': { bgTone: 'bg-[#d9e8df]' },
   'jordan-lee': { bgTone: 'bg-[#e8dfd5]' },
   'sam-taylor': { bgTone: 'bg-[#d9e0e8]' },
 };

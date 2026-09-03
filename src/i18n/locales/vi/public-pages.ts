@@ -1,14 +1,162 @@
-import en from '../en/public-pages';
+import en from "../en/public-pages";
 
 const publicPages = {
   ...en,
-  breadcrumbs: { home: 'Trang chủ', services: 'Dịch vụ', doctors: 'Bác sĩ' },
-  common: { notFoundTitle: 'Không tìm thấy trang', notFoundDescription: 'Thông tin bạn yêu cầu không có sẵn. Vui lòng quay lại trang chủ.', backHome: 'Về trang chủ', explore: 'Khám phá', book: 'Đặt lịch hẹn', areas: 'Lĩnh vực thực hành', expect: 'Điều bạn có thể mong đợi' },
-  services: { ...en.services, title: 'Dịch vụ cho mọi giai đoạn của nụ cười', intro: 'Chăm sóc nha khoa rõ ràng, tận tâm cho nhu cầu hằng ngày và sức khỏe lâu dài.', detailIntro: 'Cách chăm sóc chu đáo, dựa trên câu hỏi, sự thoải mái và mục tiêu của bạn.', benefits: 'Lợi ích của dịch vụ', items: Object.fromEntries(Object.entries(en.services.items).map(([key, value]) => [key, { ...value, title: ({ 'general-dentistry': 'Nha khoa tổng quát', 'dental-cleaning': 'Vệ sinh răng', 'teeth-whitening': 'Tẩy trắng răng', 'dental-implants': 'Cấy ghép răng', orthodontics: 'Chỉnh nha', 'childrens-dentistry': 'Nha khoa trẻ em' } as Record<string, string>)[key] }])) },
-  about: { ...en.about, eyebrow: 'Về phòng khám', title: 'Chăm sóc nụ cười nhẹ nhàng hơn', intro: 'Nha khoa BrightSmile là một mô hình phòng khám mẫu chuyên nghiệp, tập trung vào giao tiếp rõ ràng, thăm khám tận tâm và tôn trọng từng bệnh nhân.', missionTitle: 'Sứ mệnh', mission: 'Giúp việc chăm sóc nha khoa dễ hiểu và thoải mái hơn, bắt đầu từ từng cuộc trò chuyện.', valuesTitle: 'Giá trị', values: [{ title: 'Lắng nghe trước', text: 'Dành thời gian cho câu hỏi, hoàn cảnh và ưu tiên riêng của bạn.' }, { title: 'Rõ ràng', text: 'Giải thích các lựa chọn bằng ngôn ngữ dễ hiểu để bạn quyết định chủ động.' }, { title: 'Chăm sóc tận tâm', text: 'Thiết kế mỗi lần thăm khám dựa trên sự tôn trọng, thoải mái và liên tục.' }], environmentTitle: 'Không gian thân thiện', environment: 'Không gian phòng khám mẫu được hình dung sáng sủa, yên tĩnh và thiết thực, giúp bệnh nhân an tâm từ lúc đến cho đến sau buổi hẹn.', cta: 'Bắt đầu trò chuyện' },
-  doctors: { ...en.doctors, title: 'Gặp gỡ đội ngũ chăm sóc', intro: 'Tìm hiểu những người làm cho mỗi lần thăm khám trở nên chu đáo và riêng biệt.', practice: 'Lĩnh vực thực hành', items: { 'alex-morgan': { name: 'Bác sĩ Alex Morgan', specialty: 'Nha khoa tổng quát', bio: 'Alex tiếp cận chăm sóc nha khoa hằng ngày và giáo dục bệnh nhân một cách tận tâm, gần gũi.', areas: ['Chăm sóc dự phòng', 'Tư vấn phục hồi', 'Giáo dục bệnh nhân'] }, 'jordan-lee': { name: 'Bác sĩ Jordan Lee', specialty: 'Chỉnh nha', bio: 'Jordan giúp bệnh nhân tìm hiểu về chỉnh nha với kỳ vọng rõ ràng và sự thoải mái được đặt lên trước.', areas: ['Tư vấn chỉnh nha', 'Lập kế hoạch sắp xếp răng', 'Chăm sóc gia đình'] }, 'sam-taylor': { name: 'Bác sĩ Sam Taylor', specialty: 'Nha khoa trẻ em', bio: 'Sam tập trung tạo trải nghiệm phù hợp lứa tuổi để các em tự tin hơn trong mỗi lần đến nha khoa.', areas: ['Khám cho trẻ', 'Hướng dẫn dự phòng', 'Trao đổi cùng gia đình'] } } },
-  faq: { ...en.faq, title: 'Giải đáp rõ ràng', intro: 'Thông tin chung giúp bạn chuẩn bị tốt hơn. Bạn có thể trao đổi chi tiết với đội ngũ phòng khám.', items: Object.fromEntries(Object.entries(en.faq.items).map(([key, value]) => [key, [({ booking: 'Tôi có thể đặt lịch hẹn như thế nào?', checkups: 'Bao lâu nên khám răng định kỳ?', cleaning: 'Điều gì xảy ra trong buổi vệ sinh răng?', whitening: 'Tẩy trắng răng có phù hợp với tôi không?', braces: 'Tôi tìm hiểu về niềng răng như thế nào?', children: 'Khi nào trẻ nên bắt đầu khám răng?', implants: 'Tôi nên biết gì về cấy ghép răng?', duration: 'Một buổi hẹn kéo dài bao lâu?', bring: 'Tôi nên mang gì khi đến khám?', emergency: 'Tôi có thể hỏi về vấn đề răng miệng khẩn cấp không?' } as Record<string, string>)[key], value[1]]] as [string, [string, string]])) },
-  contact: { ...en.contact, title: 'Hãy giữ liên lạc', intro: 'Tìm phòng khám, liên hệ đội ngũ hoặc bắt đầu lên kế hoạch cho buổi thăm khám.', addressLabel: 'Địa chỉ', address: '123 Đường Mẫu, Thành phố của bạn', phoneLabel: 'Điện thoại', phone: '+00 000 000 000', emailLabel: 'Email', hoursLabel: 'Giờ mở cửa', hours: 'Thứ Hai–Thứ Sáu, 8:00–17:00', mapTitle: 'Vị trí phòng khám', mapText: 'Bản đồ mẫu. Có thể thêm liên kết vị trí khi địa chỉ phòng khám được xác nhận.', mapLink: 'Mở bản đồ mẫu' },
-  meta: { services: 'Dịch vụ nha khoa | Nha khoa BrightSmile', about: 'Về phòng khám | Nha khoa BrightSmile', doctors: 'Đội ngũ bác sĩ | Nha khoa BrightSmile', faq: 'Câu hỏi nha khoa | Nha khoa BrightSmile', contact: 'Liên hệ phòng khám | Nha khoa BrightSmile', description: 'Chăm sóc nha khoa tận tâm và thông tin rõ ràng từ Nha khoa BrightSmile.' },
+  breadcrumbs: { home: "Trang chủ", services: "Dịch vụ", doctors: "Bác sĩ" },
+  common: {
+    notFoundTitle: "Không tìm thấy trang",
+    notFoundDescription:
+      "Thông tin bạn yêu cầu không có sẵn. Vui lòng quay lại trang chủ.",
+    backHome: "Về trang chủ",
+    explore: "Khám phá",
+    book: "Đặt lịch hẹn",
+    areas: "Lĩnh vực thực hành",
+    expect: "Điều bạn có thể mong đợi",
+  },
+  services: {
+    ...en.services,
+    title: "Dịch vụ cho mọi giai đoạn của nụ cười",
+    intro:
+      "Chăm sóc nha khoa rõ ràng, tận tâm cho nhu cầu hằng ngày và sức khỏe lâu dài.",
+    detailIntro:
+      "Cách chăm sóc chu đáo, dựa trên câu hỏi, sự thoải mái và mục tiêu của bạn.",
+    benefits: "Lợi ích của dịch vụ",
+    items: Object.fromEntries(
+      Object.entries(en.services.items).map(([key, value]) => [
+        key,
+        {
+          ...value,
+          title: (
+            {
+              "general-dentistry": "Nha khoa tổng quát",
+              "dental-cleaning": "Vệ sinh răng",
+              "teeth-whitening": "Tẩy trắng răng",
+              "dental-implants": "Cấy ghép răng",
+              orthodontics: "Chỉnh nha",
+              "childrens-dentistry": "Nha khoa trẻ em",
+            } as Record<string, string>
+          )[key],
+        },
+      ]),
+    ),
+  },
+  about: {
+    ...en.about,
+    eyebrow: "Về phòng khám",
+    title: "Chăm sóc nụ cười nhẹ nhàng hơn",
+    intro:
+      "Nha Khoa Thịnh Hưng là một mô hình phòng khám mẫu chuyên nghiệp, tập trung vào giao tiếp rõ ràng, thăm khám tận tâm và tôn trọng từng bệnh nhân.",
+    missionTitle: "Sứ mệnh",
+    mission:
+      "Giúp việc chăm sóc nha khoa dễ hiểu và thoải mái hơn, bắt đầu từ từng cuộc trò chuyện.",
+    valuesTitle: "Giá trị",
+    values: [
+      {
+        title: "Lắng nghe trước",
+        text: "Dành thời gian cho câu hỏi, hoàn cảnh và ưu tiên riêng của bạn.",
+      },
+      {
+        title: "Rõ ràng",
+        text: "Giải thích các lựa chọn bằng ngôn ngữ dễ hiểu để bạn quyết định chủ động.",
+      },
+      {
+        title: "Chăm sóc tận tâm",
+        text: "Thiết kế mỗi lần thăm khám dựa trên sự tôn trọng, thoải mái và liên tục.",
+      },
+    ],
+    environmentTitle: "Không gian thân thiện",
+    environment:
+      "Không gian phòng khám mẫu được hình dung sáng sủa, yên tĩnh và thiết thực, giúp bệnh nhân an tâm từ lúc đến cho đến sau buổi hẹn.",
+    cta: "Bắt đầu trò chuyện",
+  },
+  doctors: {
+    ...en.doctors,
+    title: "Gặp gỡ đội ngũ chăm sóc",
+    intro:
+      "Tìm hiểu những người làm cho mỗi lần thăm khám trở nên chu đáo và riêng biệt.",
+    practice: "Lĩnh vực thực hành",
+    items: {
+      "ngoc-hieu": {
+        name: "Bác sĩ Ngọc Hiếu",
+        specialty: "Nha khoa tổng quát",
+        bio: "BS.Ngọc Hiếu tiếp cận chăm sóc nha khoa hằng ngày và giáo dục bệnh nhân một cách tận tâm, gần gũi.",
+        areas: ["Chăm sóc dự phòng", "Tư vấn phục hồi", "Giáo dục bệnh nhân"],
+      },
+      "jordan-lee": {
+        name: "Bác sĩ Jordan Lee",
+        specialty: "Chỉnh nha",
+        bio: "Jordan giúp bệnh nhân tìm hiểu về chỉnh nha với kỳ vọng rõ ràng và sự thoải mái được đặt lên trước.",
+        areas: [
+          "Tư vấn chỉnh nha",
+          "Lập kế hoạch sắp xếp răng",
+          "Chăm sóc gia đình",
+        ],
+      },
+      "sam-taylor": {
+        name: "Bác sĩ Sam Taylor",
+        specialty: "Nha khoa trẻ em",
+        bio: "Sam tập trung tạo trải nghiệm phù hợp lứa tuổi để các em tự tin hơn trong mỗi lần đến nha khoa.",
+        areas: ["Khám cho trẻ", "Hướng dẫn dự phòng", "Trao đổi cùng gia đình"],
+      },
+    },
+  },
+  faq: {
+    ...en.faq,
+    title: "Giải đáp rõ ràng",
+    intro:
+      "Thông tin chung giúp bạn chuẩn bị tốt hơn. Bạn có thể trao đổi chi tiết với đội ngũ phòng khám.",
+    items: Object.fromEntries(
+      Object.entries(en.faq.items).map(
+        ([key, value]) =>
+          [
+            key,
+            [
+              (
+                {
+                  booking: "Tôi có thể đặt lịch hẹn như thế nào?",
+                  checkups: "Bao lâu nên khám răng định kỳ?",
+                  cleaning: "Điều gì xảy ra trong buổi vệ sinh răng?",
+                  whitening: "Tẩy trắng răng có phù hợp với tôi không?",
+                  braces: "Tôi tìm hiểu về niềng răng như thế nào?",
+                  children: "Khi nào trẻ nên bắt đầu khám răng?",
+                  implants: "Tôi nên biết gì về cấy ghép răng?",
+                  duration: "Một buổi hẹn kéo dài bao lâu?",
+                  bring: "Tôi nên mang gì khi đến khám?",
+                  emergency:
+                    "Tôi có thể hỏi về vấn đề răng miệng khẩn cấp không?",
+                } as Record<string, string>
+              )[key],
+              value[1],
+            ],
+          ] as [string, [string, string]],
+      ),
+    ),
+  },
+  contact: {
+    ...en.contact,
+    title: "Hãy giữ liên lạc",
+    intro:
+      "Tìm phòng khám, liên hệ đội ngũ hoặc bắt đầu lên kế hoạch cho buổi thăm khám.",
+    addressLabel: "Địa chỉ",
+    address: "918 Âu Cơ, Tân Bình, Thành phố Hồ Chí Minh, Việt Nam",
+    phoneLabel: "Điện thoại",
+    phone: "+84 909 599 005",
+    emailLabel: "Email",
+    hoursLabel: "Giờ mở cửa",
+    hours: "Thứ Hai–Chủ Nhật, 8:00–20:30",
+    mapTitle: "Vị trí phòng khám",
+    mapText:
+      "Bản đồ mẫu. Có thể thêm liên kết vị trí khi địa chỉ phòng khám được xác nhận.",
+    mapLink: "Mở bản đồ mẫu",
+  },
+  meta: {
+    services: "Dịch vụ nha khoa | Nha Khoa Thịnh Hưng",
+    about: "Về phòng khám | Nha Khoa Thịnh Hưng",
+    doctors: "Đội ngũ bác sĩ | Nha Khoa Thịnh Hưng",
+    faq: "Câu hỏi nha khoa | Nha Khoa Thịnh Hưng",
+    contact: "Liên hệ phòng khám | Nha Khoa Thịnh Hưng",
+    description:
+      "Chăm sóc nha khoa tận tâm và thông tin rõ ràng từ Nha Khoa Thịnh Hưng.",
+  },
 };
 export default publicPages;

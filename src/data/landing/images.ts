@@ -5,7 +5,7 @@
 
 export const landingImages = {
   hero: {
-    src: 'https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=900&q=80',
+    src: 'https://plus.unsplash.com/premium_photo-1681966962522-546f370bc98e?auto=format&fit=crop&w=900&q=80',
     alt: 'public.hero.imageAlt' as const,
     width: 900,
     height: 1125,

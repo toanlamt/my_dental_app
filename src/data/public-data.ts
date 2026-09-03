@@ -8,7 +8,7 @@ export const serviceRecords = [
 ] as const;
 
 export const doctorRecords = [
-  { slug: 'alex-morgan', initials: 'AM', tone: 'bg-[#d9e8df]' },
+  { slug: 'ngoc-hieu', initials: 'NH', tone: 'bg-[#d9e8df]' },
   { slug: 'jordan-lee', initials: 'JL', tone: 'bg-[#e8dfd5]' },
   { slug: 'sam-taylor', initials: 'ST', tone: 'bg-[#d9e0e8]' },
 ] as const;

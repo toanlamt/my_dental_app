@@ -1,15 +1,15 @@
 const phase9 = {
   meta: {
-    homeTitle: 'Nha khoa BrightSmile | Chăm sóc nha khoa tận tâm',
+    homeTitle: 'Nha Khoa Thịnh Hưng | Chăm sóc nha khoa tận tâm',
     homeDescription:
-      'Nha khoa BrightSmile mang đến dịch vụ chăm sóc nha khoa hiện đại, tận tâm với thông tin rõ ràng và đặt lịch thuận tiện.',
-    bookingTitle: 'Đặt lịch hẹn | Nha khoa BrightSmile',
+      'Nha Khoa Thịnh Hưng mang đến dịch vụ chăm sóc nha khoa hiện đại, tận tâm với thông tin rõ ràng và đặt lịch thuận tiện.',
+    bookingTitle: 'Đặt lịch hẹn | Nha Khoa Thịnh Hưng',
     bookingDescription:
-      'Gửi yêu cầu đặt lịch tại Nha khoa BrightSmile với ngày, giờ, dịch vụ và bác sĩ mong muốn.',
+      'Gửi yêu cầu đặt lịch tại Nha Khoa Thịnh Hưng với ngày, giờ, dịch vụ và bác sĩ mong muốn.',
   },
   notFound: {
-    metaTitle: 'Không tìm thấy trang | Nha khoa BrightSmile',
-    metaDescription: 'Trang bạn yêu cầu hiện không khả dụng. Vui lòng quay lại trang chủ Nha khoa BrightSmile.',
+    metaTitle: 'Không tìm thấy trang | Nha Khoa Thịnh Hưng',
+    metaDescription: 'Trang bạn yêu cầu hiện không khả dụng. Vui lòng quay lại trang chủ Nha Khoa Thịnh Hưng.',
     title: 'Không tìm thấy trang',
     description: 'Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển.',
   },

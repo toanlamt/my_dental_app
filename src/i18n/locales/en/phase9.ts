@@ -1,15 +1,15 @@
 const phase9 = {
   meta: {
-    homeTitle: 'BrightSmile Dental | Thoughtful dental care',
+    homeTitle: 'Thịnh Hưng Dental | Thoughtful dental care',
     homeDescription:
-      'BrightSmile Dental offers thoughtful, modern dental care with services, doctors, and easy appointment requests.',
-    bookingTitle: 'Book an appointment | BrightSmile Dental',
+      'Thịnh Hưng Dental offers thoughtful, modern dental care with services, doctors, and easy appointment requests.',
+    bookingTitle: 'Book an appointment | Thịnh Hưng Dental',
     bookingDescription:
-      'Send an appointment request to BrightSmile Dental. Choose a preferred date, time, service, and doctor.',
+      'Send an appointment request to Thịnh Hưng Dental. Choose a preferred date, time, service, and doctor.',
   },
   notFound: {
-    metaTitle: 'Page not found | BrightSmile Dental',
-    metaDescription: 'The page you requested is unavailable. Return to the BrightSmile Dental home page.',
+    metaTitle: 'Page not found | Thịnh Hưng Dental',
+    metaDescription: 'The page you requested is unavailable. Return to the Thịnh Hưng Dental home page.',
     title: 'Page not found',
     description: 'The page you are looking for does not exist or may have moved.',
   },
