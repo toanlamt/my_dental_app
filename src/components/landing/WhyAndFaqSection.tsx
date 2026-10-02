@@ -6,8 +6,8 @@ export function WhyAndFaqSection() {
   const { t } = useTranslation();
   const whyItems = (t('public.why.items', { returnObjects: true }) as string[]) || [];
   const faqItems = faqKeys.map((key) => ({
-    question: t(`public.faq.items.${key}.0`),
-    answer: t(`public.faq.items.${key}.1`),
+    question: t(`publicPages.faq.items.${key}.0`),
+    answer: t(`publicPages.faq.items.${key}.1`),
   }));
 
   return (
