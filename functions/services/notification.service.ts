@@ -39,7 +39,7 @@ function parseMetadata(raw: string | null): NotificationMetadata {
   }
 }
 
-async function cleanupOldNotifications(db: Env['DB']): Promise<void> {
+export async function cleanupOldNotifications(db: Env['DB']): Promise<void> {
   try {
     await db
       .prepare(`DELETE FROM notifications WHERE created_at < datetime('now', '-${RETENTION_DAYS} days')`)

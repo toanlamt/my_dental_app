@@ -1,0 +1,22 @@
+name: Scheduled Data Cleanup
+
+on:
+  schedule:
+    # Run daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cleanup Endpoint
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          # Replace with your actual production URL in GitHub secrets
+          PROD_URL: ${{ secrets.PROD_URL }} 
+        run: |
+          curl -X POST "${PROD_URL}/api/admin/cleanup" \
+               -H "Authorization: Bearer ${JWT_SECRET}" \
+               -H "Content-Type: application/json" \
+               --fail

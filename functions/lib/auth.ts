@@ -1,4 +1,3 @@
-import { jwtVerify, SignJWT } from 'jose';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import type { Context, MiddlewareHandler } from 'hono';
 import type { Env } from './db';
@@ -8,23 +7,15 @@ import { findUserById } from '../services/user.service';
 const SESSION_COOKIE = 'session';
 const SESSION_TTL_SECONDS = 8 * 60 * 60; // 8 hours
 
-type SessionPayload = {
-  sub: string;
-  role: Role;
-  exp: number;
-};
-
 export async function createSession(c: Context<{ Bindings: Env; Variables: AuthVariables }>, user: Pick<User, 'id' | 'role'>) {
-  const payload: SessionPayload = {
-    sub: user.id,
-    role: user.role,
-    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
-  };
-  const token = await new SignJWT({ role: payload.role })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(payload.sub)
-    .setExpirationTime(payload.exp)
-    .sign(new TextEncoder().encode(c.env.JWT_SECRET));
+  const token = crypto.randomUUID() + crypto.randomUUID();
+  const sessionId = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
+  
+  await c.env.DB.prepare(
+    `INSERT INTO user_sessions (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)`
+  ).bind(sessionId, user.id, token, expiresAt).run();
+
   setCookie(c, SESSION_COOKIE, token, {
     httpOnly: true,
     secure: new URL(c.req.url).protocol === 'https:',
@@ -34,7 +25,11 @@ export async function createSession(c: Context<{ Bindings: Env; Variables: AuthV
   });
 }
 
-export function clearSession(c: Context<{ Bindings: Env; Variables: AuthVariables }>) {
+export async function clearSession(c: Context<{ Bindings: Env; Variables: AuthVariables }>) {
+  const token = getCookie(c, SESSION_COOKIE);
+  if (token) {
+    await c.env.DB.prepare(`DELETE FROM user_sessions WHERE token = ?`).bind(token).run();
+  }
   deleteCookie(c, SESSION_COOKIE, { path: '/' });
 }
 
@@ -47,19 +42,15 @@ export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: AuthVari
   const token = getCookie(c, SESSION_COOKIE);
   if (!token) return c.json({ error: 'Not authenticated' }, 401);
 
-  let payload: SessionPayload;
-  try {
-    const verified = await jwtVerify(token, new TextEncoder().encode(c.env.JWT_SECRET));
-    payload = {
-      sub: verified.payload.sub ?? '',
-      role: verified.payload.role as Role,
-      exp: verified.payload.exp ?? 0,
-    };
-  } catch {
+  const session = await c.env.DB.prepare(
+    `SELECT user_id, expires_at FROM user_sessions WHERE token = ? AND expires_at > datetime('now')`
+  ).bind(token).first<{ user_id: string; expires_at: string }>();
+
+  if (!session) {
     return c.json({ error: 'Invalid or expired session' }, 401);
   }
 
-  const user = await findUserById(c.env.DB, payload.sub);
+  const user = await findUserById(c.env.DB, session.user_id);
   if (!user || !user.is_active) return c.json({ error: 'Not authenticated' }, 401);
 
   c.set('user', user);

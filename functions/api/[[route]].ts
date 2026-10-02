@@ -83,7 +83,7 @@ app.post('/auth/login', async (c) => {
 
 app.post('/auth/logout', requireAuth, async (c) => {
   const user = c.get('user');
-  clearSession(c);
+  await clearSession(c);
   await logAudit(c.env.DB, { userId: user.id, action: 'auth.logout', entityType: 'user', entityId: user.id });
   return c.json({ ok: true });
 });
@@ -876,6 +876,15 @@ app.post('/notifications/read-all', requireAuth, async (c) => {
   const user = c.get('user');
   const updated = await notificationService.markAllNotificationsAsRead(c.env.DB, user.id);
   return c.json({ updated });
+});
+
+app.post('/admin/cleanup', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  if (authHeader !== `Bearer ${c.env.JWT_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  await notificationService.cleanupOldNotifications(c.env.DB);
+  return c.json({ ok: true });
 });
 
 app.onError((err, c) => {
