@@ -21,32 +21,58 @@ export function ServicesSection() {
   }>;
 
   return (
-    <section id="services" className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
-      <div className="mb-10">
-        <p className="public-kicker">{t('public.services.eyebrow')}</p>
-        <h2 className="public-heading">{t('public.services.title')}</h2>
+    <section id="services" className="relative mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
+      {/* Section Header */}
+      <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end mb-14">
+        <div className="max-w-2xl">
+          <p className="public-kicker flex items-center gap-2">
+            <span className="h-px w-8 bg-[#f0b936]" />
+            {t('public.services.eyebrow')}
+          </p>
+          <h2 className="mt-3 font-serif text-3xl font-normal tracking-tight text-[#12343b] sm:text-4xl lg:text-5xl">
+            {t('public.services.title')}
+          </h2>
+        </div>
+        <Link
+          to="/services"
+          className="inline-flex items-center gap-2 rounded-full border border-[#cbdad5] bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#12343b] shadow-sm transition hover:border-[#12343b] hover:bg-[#f3f9f7]"
+        >
+          <span>{t('public.services.viewAll')}</span>
+          <ArrowRight size={14} />
+        </Link>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+      {/* Services Grid */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {services.map((service) => {
           const record = serviceRecords.find((r) => r.slug === service.slug);
           const Icon = record ? iconMap[record.icon] : HeartPulse;
           return (
             <article
               key={service.slug}
-              className="group border border-[#dce9e5] bg-white p-6 transition hover:-translate-y-1 hover:shadow-lg"
+              className="group relative flex flex-col justify-between rounded-3xl border border-[#dce9e5] bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-[#24636a]/30 hover:shadow-xl hover:shadow-[#12343b]/5"
             >
-              <div className="mb-10 flex h-11 w-11 items-center justify-center rounded-xl bg-[#e5f0ec] text-[#24636a]">
-                <Icon size={21} />
+              <div>
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf4f0] text-[#12343b] transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#12343b] group-hover:text-[#f4c95d]">
+                  <Icon size={26} />
+                </div>
+                <h3 className="font-serif text-2xl font-normal text-[#12343b] group-hover:text-[#1d525c] transition-colors">
+                  {service.title}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-[#66817e]">
+                  {service.description}
+                </p>
               </div>
-              <h3 className="font-serif text-2xl">{service.title}</h3>
-              <p className="mt-2 min-h-12 text-sm leading-6 text-[#66817e]">{service.description}</p>
-              <Link
-                to={`/services/${service.slug}`}
-                className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#24636a]"
-              >
-                {t('public.learnMore')}
-                <ArrowRight size={15} />
-              </Link>
+
+              <div className="mt-8 border-t border-[#f0f6f4] pt-4">
+                <Link
+                  to={`/services/${service.slug}`}
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#12343b] transition-colors group-hover:text-[#24636a]"
+                >
+                  <span>{t('public.learnMore')}</span>
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
             </article>
           );
         })}
