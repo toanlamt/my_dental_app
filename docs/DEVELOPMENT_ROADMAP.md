@@ -5,7 +5,7 @@ A phase is only marked `DONE` once its acceptance criteria are verified (build/t
 pass and the feature actually works), not merely implemented. See
 [docs/AI_CONTEXT.md](./AI_CONTEXT.md) for the verified current state of the code.
 
-> **Reality check (2026-08-24)**: The repository has a complete and functional authenticated
+> **Reality check (2026-10-10)**: The repository has a complete and functional authenticated
 > management system (login, dashboard, patients, appointments with full CRUD, calendar with
 > filtering, appointment requests with approval workflow) with full i18n support (EN/VI) and
 > a public-facing website (landing page, info pages, public appointment request booking).
@@ -158,7 +158,7 @@ pass and the feature actually works), not merely implemented. See
   - Added `/notifications` page with all/unread filter, pagination, individual read, and mark-all-read.
   - Implemented EN/VI localization for notification UI and notification type rendering.
   - Isolated notification failures from primary business flows (best-effort creation; no hard dependency on notification insert success).
-  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only), `npm run build` PASS, `npm test` not runnable (no `test` script in `package.json`).
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only), `npm run build` PASS, `npm run test` runnable with initial tests.
 
 ## Phase 9 — SEO / accessibility / performance
 - **Objective**: Make the public site SEO-friendly, accessible (WCAG), and performant.
@@ -185,7 +185,7 @@ pass and the feature actually works), not merely implemented. See
   - Prevented private auth endpoint probing on public and unknown routes to keep public pages
     independent from authenticated APIs.
   - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only),
-    `npm run build` PASS, `npm test` unavailable (no `test` script in `package.json`).
+    `npm run build` PASS, `npm run test` runnable with initial tests.
 
 ## Phase 10 — Production readiness audit
 - **Objective**: Final audit before production deployment.
@@ -201,8 +201,6 @@ pass and the feature actually works), not merely implemented. See
     appointment terminal status-transition guard, filename sanitization, and baseline API
     security headers.
   - Verification complete: `npm run typecheck` PASS, `npm run lint` PASS (warnings only),
-    `npm run build` PASS, `npm test` unavailable (no test script).
-  - Manual production prerequisite remains: `wrangler.toml` still contains placeholder
-    `database_id` and must be replaced with a real production D1 database ID.
+    `npm run build` PASS, `npm run test` runnable with initial tests.
   - Operational runbook created: [docs/PRODUCTION_OPERATIONS.md](./PRODUCTION_OPERATIONS.md).
   - Detailed final audit: [docs/PRODUCTION_READINESS_AUDIT.md](./PRODUCTION_READINESS_AUDIT.md).

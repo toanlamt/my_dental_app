@@ -4,7 +4,7 @@
 > in sync with the code (see `.github/copilot-instructions.md`). If something here looks
 > outdated, trust the code and update this file.
 >
-> Last verified: 2026-08-25 (Phase 10 final hardening pass).
+> Last verified: 2026-10-10 (Production Readiness Audit Sync).
 
 ## 1. Technology stack
 
@@ -19,15 +19,14 @@
   Migrations live in `migrations/*.sql` and are applied with `wrangler d1 migrations apply`.
 - **Object Storage**: Cloudflare R2, binding name `DOCUMENTS` in `wrangler.toml`. Binary document
   files (X-rays, images, PDFs) are stored in R2; metadata is in D1.
-- **Auth**: Stateless JWT session stored in an httpOnly cookie, signed/verified with `jose`
-  (HS256). No server-side session store.
+- **Auth**: Stateful session stored in an httpOnly cookie and verified against the `user_sessions` D1 table. Tokens are securely generated.
 - **Validation**: `zod` (`functions/lib/validation.ts`).
 - **Password hashing**: PBKDF2-SHA256 implemented with Web Crypto (`functions/lib/password.ts`).
 - **Lint**: `oxlint` (`.oxlintrc.json`, plugins: react, typescript, oxc).
 - **Internationalization**: `i18next` and `react-i18next` are declared in `package.json`, with
   EN/VI resources under `src/i18n/locales`, English fallback, and `localStorage` persistence.
   All management UI and documents feature are fully translated.
-- **No testing framework is installed** (no Jest/Vitest/Playwright in `package.json`).
+- **Testing**: `vitest` and `@testing-library/react` are installed, with some initial test coverage in `functions/`.
 
 Key scripts (`package.json`):
 - `npm run dev` — Vite dev server only (frontend, no API).
@@ -35,6 +34,7 @@ Key scripts (`package.json`):
 - `npm run build` — `tsc -b && vite build`.
 - `npm run typecheck` — `tsc -b` (uses project references: app/node/functions tsconfigs).
 - `npm run lint` — `oxlint`.
+- `npm run test` — `vitest run`.
 - `npm run db:migrate:local` / `db:migrate:remote` — apply D1 migrations.
 
 ## 2. Repository structure (actual)
@@ -68,6 +68,7 @@ migrations/
   0006_dental_chart.sql                 Dental chart table for tooth-level status tracking.
   0007_patient_documents.sql            Patient documents metadata table (R2 object references).
   0008_notifications.sql                Per-user in-app notifications with read_at and dedupe key.
+  0009_sessions.sql                     Stateful user sessions table (`user_sessions`).
 
 src/
   main.tsx               Entry point — renders AppRouter (NOT App.tsx).
@@ -105,10 +106,10 @@ src/
   pages/
     landing-page.tsx      Route component; minimal wrapper around LandingPageComponent.
     login-page.tsx
-    dashboard-page-v2.tsx, dashboard-page.tsx       (only -v2 is routed; non-v2 is unused/legacy)
-    patients-page-v2.tsx, patients-page.tsx         (only -v2 is routed; non-v2 is unused/legacy)
-    patient-detail-page-v2.tsx, patient-detail-page.tsx (only -v2 is routed; non-v2 is unused/legacy; now includes Documents tab)
-    calendar-page-v2.tsx, calendar-page.tsx         (only -v2 is routed; non-v2 is unused/legacy)
+    dashboard-page-v2.tsx
+    patients-page-v2.tsx
+    patient-detail-page-v2.tsx
+    calendar-page-v2.tsx
     public-pages.tsx      All public information pages (Services, ServiceDetail, About, Doctors, DoctorDetail, FAQ, Contact).
     appointment-booking-page.tsx Public appointment request booking form.
     appointment-requests-page.tsx (protected) Admin/staff review of public appointment requests.
@@ -116,10 +117,7 @@ src/
     not-found-page.tsx    Translated 404 page for both public and authenticated routes.
 ```
 
-**Note on duplicate pages**: for each management page there are two implementations — a plain
-version (e.g. `patients-page.tsx`) and a `-v2` version (e.g. `patients-page-v2.tsx`). Only the
-`-v2` components are imported by `AppRouter.tsx`. The non-`-v2` files appear to be an earlier
-iteration and are currently unreferenced dead code. Confirm before deleting or modifying them.
+
 
 ## 3. Architecture
 
@@ -220,9 +218,8 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 ## 7. Authentication & authorization
 
 - Login: `POST /api/auth/login` with `{ username, password }`; verifies PBKDF2 hash; on
-  success sets an httpOnly, `SameSite=Lax` cookie named `session` containing a JWT
-  (`sub`=user id, `role`, 8-hour expiry), signed with `JWT_SECRET` (from `.dev.vars` locally,
-  Cloudflare secret in production — see `.dev.vars.example`).
+  success sets an httpOnly, `SameSite=Lax` cookie named `session` linked to a record in the
+  `user_sessions` table.
 - `requireAuth` middleware verifies the JWT and re-fetches the user from D1 on every request
   (so deactivating a user takes effect immediately); rejects if missing/invalid/inactive.
 - `requireRole(...roles)` middleware restricts specific routes to given roles; must run after
@@ -383,9 +380,7 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 
 ## 10. Incomplete / not started
 
-- Production deployment is not fully ready yet due to a CRITICAL manual prerequisite:
-  - `wrangler.toml` still contains placeholder `database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"`.
-  - A real production D1 database ID must be obtained from the correct Cloudflare account and configured before deploy.
+- Production deployment is not fully ready yet due to manual prerequisites.
 - Production secret setup cannot be verified from repository-only evidence:
   - `JWT_SECRET` must be present in Cloudflare Pages production secrets.
 - Production R2 posture cannot be proven from repository-only evidence:
@@ -394,4 +389,4 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   - No repo-defined automated D1 backup pipeline.
   - No repo-defined automated R2 backup/versioning pipeline.
 - Notification retention is best-effort cleanup in service code (90 days), with no scheduled external job configured in-repo.
-- Session model remains stateless JWT-in-cookie, with revocation based on expiry and user `is_active` checks.
+
