@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Env } from '../lib/db';
-import { requireAuth, requireRole, createSession, clearSession, type AuthVariables } from '../lib/auth';
+import { requireAuth, requireRole, createSession, clearSession, cleanupExpiredSessions, type AuthVariables } from '../lib/auth';
 import { verifyPassword } from '../lib/password';
 import { logAudit } from '../lib/audit';
 import {
@@ -884,6 +884,7 @@ app.post('/admin/cleanup', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   await notificationService.cleanupOldNotifications(c.env.DB);
+  await cleanupExpiredSessions(c.env.DB);
   return c.json({ ok: true });
 });
 

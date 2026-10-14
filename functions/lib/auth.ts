@@ -33,6 +33,10 @@ export async function clearSession(c: Context<{ Bindings: Env; Variables: AuthVa
   deleteCookie(c, SESSION_COOKIE, { path: '/' });
 }
 
+export async function cleanupExpiredSessions(db: Env['DB']): Promise<void> {
+  await db.prepare(`DELETE FROM user_sessions WHERE datetime(expires_at) <= datetime('now')`).run();
+}
+
 export type AuthVariables = {
   user: User;
 };
@@ -43,7 +47,7 @@ export const requireAuth: MiddlewareHandler<{ Bindings: Env; Variables: AuthVari
   if (!token) return c.json({ error: 'Not authenticated' }, 401);
 
   const session = await c.env.DB.prepare(
-    `SELECT user_id, expires_at FROM user_sessions WHERE token = ? AND expires_at > datetime('now')`
+    `SELECT user_id, expires_at FROM user_sessions WHERE token = ? AND datetime(expires_at) > datetime('now')`
   ).bind(token).first<{ user_id: string; expires_at: string }>();
 
   if (!session) {

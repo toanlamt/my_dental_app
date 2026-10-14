@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply my-dental-app-production --local",
-    "db:migrate:remote": "wrangler d1 migrations apply my-dental-app-production --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply my-dental-app-production --remote",
+    "db:seed:local": "wrangler d1 execute my-dental-app-production --local --file=./seeds/dev_seed.sql"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.6",

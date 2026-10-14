@@ -1,16 +1,6 @@
 import type { Env } from '../lib/db';
 import type { PatientDocument } from '../lib/types';
 
-/**
- * Generate a UUID v4
- */
-function randomUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 export type UploadDocumentParams = {
   patientId: string;
@@ -55,7 +45,7 @@ function sanitizeFileName(fileName: string): string {
  * Format: patients/{patientId}/documents/{uuid}
  */
 export function generateObjectKey(patientId: string): string {
-  const uuid = randomUUID();
+  const uuid = crypto.randomUUID();
   return `patients/${patientId}/documents/${uuid}`;
 }
 
@@ -64,7 +54,7 @@ export function generateObjectKey(patientId: string): string {
  * Handles failure consistency: if metadata insert fails, the R2 object is deleted.
  */
 export async function uploadDocument(env: Env, params: UploadDocumentParams): Promise<PatientDocument> {
-  const documentId = randomUUID();
+  const documentId = crypto.randomUUID();
   const objectKey = generateObjectKey(params.patientId);
   const safeFileName = sanitizeFileName(params.fileName);
 
