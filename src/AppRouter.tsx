@@ -75,9 +75,9 @@ function AppBoundary() {
 
   return (
     <AppErrorBoundary
-      title={t('phase9.errorBoundary.title')}
-      description={t('phase9.errorBoundary.description')}
-      reloadLabel={t('phase9.errorBoundary.reload')}
+      title={t('site.errorBoundary.title')}
+      description={t('site.errorBoundary.description')}
+      reloadLabel={t('site.errorBoundary.reload')}
       homeLabel={t('publicPages.common.backHome')}
     >
       <AppContent />

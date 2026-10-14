@@ -22,7 +22,7 @@ export function PublicLayout() {
 
   return <div className="public-site min-h-screen bg-[#f8fbfa] text-[#12343b]">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:font-semibold focus:text-[#12343b] focus:shadow">
-        {t('phase9.a11y.skipToMain')}
+        {t('site.a11y.skipToMain')}
       </a>
       <header className="border-b border-[#dce9e5] bg-[#f8fbfa]/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8">

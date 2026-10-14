@@ -17,8 +17,8 @@ export function AppointmentBookingPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   usePageMeta({
-    title: t('phase9.meta.bookingTitle'),
-    description: t('phase9.meta.bookingDescription'),
+    title: t('site.meta.bookingTitle'),
+    description: t('site.meta.bookingDescription'),
   });
 
   useEffect(() => {

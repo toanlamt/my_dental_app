@@ -4,15 +4,15 @@ import en from './locales/en/common';
 import vi from './locales/vi/common';
 import enPublicPages from './locales/en/public-pages';
 import viPublicPages from './locales/vi/public-pages';
-import enPhase9 from './locales/en/phase9';
-import viPhase9 from './locales/vi/phase9';
+import enSite from './locales/en/site';
+import viSite from './locales/vi/site';
 
 const savedLanguage = localStorage.getItem('language');
 
 void i18n.use(initReactI18next).init({
   resources: {
-    en: { common: { ...en, publicPages: enPublicPages, phase9: enPhase9 } },
-    vi: { common: { ...vi, publicPages: viPublicPages, phase9: viPhase9 } },
+    en: { common: { ...en, publicPages: enPublicPages, site: enSite } },
+    vi: { common: { ...vi, publicPages: viPublicPages, site: viSite } },
   },
   lng: savedLanguage === 'en' ? 'en' : 'vi',
   fallbackLng: 'en',

@@ -13,7 +13,7 @@
   - `src/layouts/public-layout.tsx` — header, footer, navigation (shared by all public pages)
 
 - **Content & internationalization**:
-  - `src/i18n/locales/en/common.ts` — English keys: `public.*`, `phase9.*`
+  - `src/i18n/locales/en/common.ts` — English keys: `public.*`, `site.*`
   - `src/i18n/locales/vi/common.ts` — Vietnamese translations of common
   - `src/i18n/locales/en/public-pages.ts` — English keys: `publicPages.*`
   - `src/i18n/locales/vi/public-pages.ts` — Vietnamese (uses spread from EN to avoid duplication)

@@ -68,7 +68,7 @@ export function usePageMeta({
     upsertPropertyMeta('og:url', canonical);
     upsertPropertyMeta('og:image', imageUrl);
     upsertPropertyMeta('og:locale', locale);
-    upsertPropertyMeta('og:site_name', 'Thịnh Hưng Dental');
+    upsertPropertyMeta('og:site_name', locale === 'vi_VN' ? 'Nha Khoa Thịnh Hưng' : 'Thinh Hung Dental');
 
     upsertNamedMeta('twitter:card', 'summary_large_image');
     upsertNamedMeta('twitter:title', title);

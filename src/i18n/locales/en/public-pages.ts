@@ -90,7 +90,7 @@ const publicPages = {
     eyebrow: "About the clinic",
     title: "A calmer way to care for your smile",
     intro:
-      "Thịnh Hưng Dental is a professional placeholder clinic concept built around clear communication, thoughtful visits, and respect for each patient.",
+      "Thinh Hung Dental is a professional placeholder clinic concept built around clear communication, thoughtful visits, and respect for each patient.",
     missionTitle: "Our mission",
     mission:
       "To make dental care easier to understand and more comfortable to approach, one conversation at a time.",
@@ -202,7 +202,7 @@ const publicPages = {
   contact: {
     title: "Let’s stay in touch",
     intro: "Find the clinic, reach the team, or begin planning a visit.",
-    clinic: "Thịnh Hưng Dental",
+    clinic: "Thinh Hung Dental",
     addressLabel: "Address",
     address: "918 Âu Cơ, Tân Bình, Thành phố Hồ Chí Minh, Việt Nam",
     phoneLabel: "Phone",
@@ -217,13 +217,13 @@ const publicPages = {
     mapLink: "Open map placeholder",
   },
   meta: {
-    services: "Dental services | Thịnh Hưng Dental",
-    about: "About the clinic | Thịnh Hưng Dental",
-    doctors: "Our doctors | Thịnh Hưng Dental",
-    faq: "Dental questions | Thịnh Hưng Dental",
-    contact: "Contact the clinic | Thịnh Hưng Dental",
+    services: "Dental services | Thinh Hung Dental",
+    about: "About the clinic | Thinh Hung Dental",
+    doctors: "Our doctors | Thinh Hung Dental",
+    faq: "Dental questions | Thinh Hung Dental",
+    contact: "Contact the clinic | Thinh Hung Dental",
     description:
-      "Thoughtful dental care and clear information from Thịnh Hưng Dental.",
+      "Thoughtful dental care and clear information from Thinh Hung Dental.",
   },
 };
 export default publicPages;

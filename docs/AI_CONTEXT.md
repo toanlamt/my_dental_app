@@ -102,7 +102,7 @@ src/
       images.ts           Image URLs, alt text, dimensions, and loading hints for hero and about sections.
       doctors.ts          Doctor card styling (background tones) mapped by slug.
       index.ts            Re-exports for convenient access.
-  layouts/app-layout.tsx  Sidebar + header shell for the authenticated app ("BrightSmile" branding).
+  layouts/app-layout.tsx  Sidebar + header shell for the authenticated app ("Thịnh Hưng" / "Thinh Hung" branding).
         public-layout.tsx  Header, footer, navigation for public pages (landing, services, about, etc.).
   hooks/use-debounced-value.ts
   pages/

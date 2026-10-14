@@ -32,7 +32,7 @@ export function AppLayout() {
       <aside className={cn('fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r bg-white transition-transform lg:translate-x-0', mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
         <div className="flex h-20 items-center gap-3 border-b px-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground"><Stethoscope size={20} /></div>
-          <div><p className="font-semibold tracking-tight">BrightSmile</p><p className="text-xs text-muted-foreground">{t('navigation.clinicWorkspace')}</p></div>
+          <div><p className="font-semibold tracking-tight">{t('common.clinicName')}</p><p className="text-xs text-muted-foreground">{t('navigation.clinicWorkspace')}</p></div>
           <Button className="ml-auto lg:hidden" variant="ghost" size="icon" onClick={() => setMobileOpen(false)} aria-label={t('navigation.close')}><X size={18} /></Button>
         </div>
         <nav className="flex-1 space-y-1 p-4">

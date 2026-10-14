@@ -17,8 +17,8 @@ export function LandingPage() {
   const { t } = useTranslation();
 
   usePageMeta({
-    title: t('phase9.meta.homeTitle'),
-    description: t('phase9.meta.homeDescription'),
+    title: t('site.meta.homeTitle'),
+    description: t('site.meta.homeDescription'),
   });
 
   return (
