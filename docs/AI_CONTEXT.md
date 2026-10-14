@@ -26,7 +26,7 @@
 - **Internationalization**: `i18next` and `react-i18next` are declared in `package.json`, with
   EN/VI resources under `src/i18n/locales`, English fallback, and `localStorage` persistence.
   All management UI and documents feature are fully translated.
-- **Testing**: `vitest` and `@testing-library/react` are installed, with some initial test coverage in `functions/`.
+- **Testing**: `vitest` and `@testing-library/react` are installed, with unit and component test coverage in `functions/services` (appointment, document, dental chart), `functions/lib` (auth, password), and `src/pages` (booking, login).
 
 Key scripts (`package.json`):
 - `npm run dev` — Vite dev server only (frontend, no API).
@@ -53,6 +53,8 @@ functions/
     user.service.ts         User lookups, doctor listing, user creation.
     patient.service.ts      Patient CRUD, search/pagination, notes.
     appointment.service.ts  Appointment CRUD, conflict detection, listing/filtering.
+    medical-record.service.ts Structured medical record CRUD and scoped lookups.
+    dental-chart.service.ts Tooth-level status mapping, 32 permanent teeth synthesis, and status updates.
     notification.service.ts Persistent notification CRUD, read/unread state, dedupe, retention cleanup.
     document.service.ts     Document upload/download/delete, R2 and D1 operations.
 
@@ -83,7 +85,7 @@ src/
     protected-route.tsx   Redirects to /login if not authenticated (via useAuth()).
     modal.tsx             Generic modal/dialog used by page forms.
     documents-tab.tsx     Tabbed UI for document upload, preview, download, delete within patient detail.
-    dental-chart.tsx      Visual dental chart component with tooth-level status editor.
+    dental-chart.tsx      Visual dental chart component with tooth-level status editor, note indicator badges, and tooltips.
     landing/              Landing page section components (refactored for maintainability; see below).
       LandingPage.tsx     Main landing page orchestrator; imports and composes all section components.
       HeroSection.tsx     Hero section (eyebrow, title, description, CTAs, hero image).

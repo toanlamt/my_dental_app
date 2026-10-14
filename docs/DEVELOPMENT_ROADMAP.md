@@ -126,8 +126,12 @@ pass and the feature actually works), not merely implemented. See
   API endpoints (GET/PATCH), role-based authorization (clinical roles only), audit logging,
   full EN/VI translations including status names and legend, keyboard accessibility, responsive
   design (desktop/tablet/mobile), integration with patient detail page as "Dental Chart" tab,
-  and default healthy state for unrecorded teeth. All acceptance criteria met.
-  `npm run typecheck`, `npm run lint`, and `npm run build` all pass (verified 2026-08-24).
+  and default healthy state for unrecorded teeth.
+  **Hardening & Usability Update (2026-10-14)**:
+  - Added comprehensive backend unit test suite `functions/services/dental-chart.service.test.ts` verifying 32-tooth synthesis, default state, new entry insertion, and existing entry updates.
+  - Enhanced visual dental chart UX: amber note indicator badge on teeth with clinical notes, hover tooltip note preview, and last updated timestamp display in the edit modal.
+  - Added EN/VI translations for `hasNotes` and `lastUpdated`.
+  - All acceptance criteria met; `npm run test` (7 test files, 26 tests passing), `npm run typecheck`, `npm run lint`, and `npm run build` all pass cleanly.
 
 ## Phase 7 — Patient documents / X-ray / R2
 - **Objective**: Upload/store/view patient documents and X-ray images.

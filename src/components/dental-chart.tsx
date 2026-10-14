@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { apiRequest } from '@/lib/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/primitives';
 import { Modal, type ModalField } from '@/components/modal';
+import { formatDateTime } from '@/lib/utils';
 
 type ToothStatus = 'healthy' | 'caries' | 'filled' | 'missing' | 'crown' | 'root_canal' | 'implant' | 'extraction_required';
 
@@ -69,9 +70,8 @@ export function DentalChart({ patientId }: DentalChartProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
 
-  const getToothStatus = (toothNumber: number): ToothStatus => {
-    const tooth = teeth.find((t) => t.tooth_number === toothNumber);
-    return tooth?.status ?? 'healthy';
+  const getTooth = (toothNumber: number): DentalChartEntry | undefined => {
+    return teeth.find((t) => t.tooth_number === toothNumber);
   };
 
   const editFields = (t: (key: string, options?: Record<string, unknown>) => string): ModalField[] => [
@@ -117,7 +117,7 @@ export function DentalChart({ patientId }: DentalChartProps) {
   };
 
   const handleToothClick = (toothNumber: number) => {
-    const tooth = teeth.find((t) => t.tooth_number === toothNumber) || {
+    const tooth = getTooth(toothNumber) || {
       id: '',
       patient_id: patientId,
       tooth_number: toothNumber,
@@ -129,6 +129,34 @@ export function DentalChart({ patientId }: DentalChartProps) {
     };
     setSelectedTooth(tooth);
     setEditOpen(true);
+  };
+
+  const renderToothButton = (tooth: number) => {
+    const entry = getTooth(tooth);
+    const status = entry?.status ?? 'healthy';
+    const hasNotes = Boolean(entry?.notes && entry.notes.trim().length > 0);
+    const statusKey = status.replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired');
+    const statusLabel = t(`dentalChart.statusOptions.${statusKey}`);
+    const notePreview = hasNotes ? ` • ${entry?.notes}` : '';
+
+    return (
+      <button
+        key={tooth}
+        type="button"
+        onClick={() => handleToothClick(tooth)}
+        className={`relative flex h-14 w-14 items-center justify-center rounded-lg border-2 text-sm font-semibold transition ${toothStatusColors[status]}`}
+        title={`${t('dentalChart.tooth')} ${tooth}: ${statusLabel}${notePreview}`}
+        aria-label={`${t('dentalChart.tooth')} ${tooth}, ${statusLabel}${hasNotes ? `, ${t('dentalChart.hasNotes')}: ${entry?.notes}` : ''}`}
+      >
+        {tooth}
+        {hasNotes && (
+          <span
+            className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white"
+            title={t('dentalChart.hasNotes')}
+          />
+        )}
+      </button>
+    );
   };
 
   if (loading) {
@@ -165,6 +193,10 @@ export function DentalChart({ patientId }: DentalChartProps) {
                 <span className="text-xs text-gray-700">{label}</span>
               </div>
             ))}
+            <div className="flex items-center gap-2">
+              <div className="h-2.5 w-2.5 rounded-full bg-amber-500 ring-1 ring-gray-300" />
+              <span className="text-xs text-gray-700">{t('dentalChart.hasNotes')}</span>
+            </div>
           </div>
         </div>
 
@@ -177,34 +209,14 @@ export function DentalChart({ patientId }: DentalChartProps) {
               <div className="flex items-center justify-center gap-2">
                 <span className="text-xs text-gray-500">{t('dentalChart.right')}</span>
                 <div className="flex gap-1">
-                  {teethLayout.upper.right.map((tooth) => (
-                    <button
-                      key={tooth}
-                      onClick={() => handleToothClick(tooth)}
-                      className={`flex h-14 w-14 items-center justify-center rounded-lg border-2 text-sm font-semibold transition ${toothStatusColors[getToothStatus(tooth)]}`}
-                      title={`${t('dentalChart.tooth')} ${tooth}: ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                      aria-label={`${t('dentalChart.tooth')} ${tooth}, ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                    >
-                      {tooth}
-                    </button>
-                  ))}
+                  {teethLayout.upper.right.map(renderToothButton)}
                 </div>
                 <span className="text-xs text-gray-500">{t('dentalChart.left')}</span>
               </div>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-xs text-gray-500">{t('dentalChart.right')}</span>
                 <div className="flex gap-1">
-                  {teethLayout.upper.left.map((tooth) => (
-                    <button
-                      key={tooth}
-                      onClick={() => handleToothClick(tooth)}
-                      className={`flex h-14 w-14 items-center justify-center rounded-lg border-2 text-sm font-semibold transition ${toothStatusColors[getToothStatus(tooth)]}`}
-                      title={`${t('dentalChart.tooth')} ${tooth}: ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                      aria-label={`${t('dentalChart.tooth')} ${tooth}, ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                    >
-                      {tooth}
-                    </button>
-                  ))}
+                  {teethLayout.upper.left.map(renderToothButton)}
                 </div>
                 <span className="text-xs text-gray-500">{t('dentalChart.left')}</span>
               </div>
@@ -218,34 +230,14 @@ export function DentalChart({ patientId }: DentalChartProps) {
               <div className="flex items-center justify-center gap-2">
                 <span className="text-xs text-gray-500">{t('dentalChart.left')}</span>
                 <div className="flex gap-1">
-                  {teethLayout.lower.left.map((tooth) => (
-                    <button
-                      key={tooth}
-                      onClick={() => handleToothClick(tooth)}
-                      className={`flex h-14 w-14 items-center justify-center rounded-lg border-2 text-sm font-semibold transition ${toothStatusColors[getToothStatus(tooth)]}`}
-                      title={`${t('dentalChart.tooth')} ${tooth}: ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                      aria-label={`${t('dentalChart.tooth')} ${tooth}, ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                    >
-                      {tooth}
-                    </button>
-                  ))}
+                  {teethLayout.lower.left.map(renderToothButton)}
                 </div>
                 <span className="text-xs text-gray-500">{t('dentalChart.right')}</span>
               </div>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-xs text-gray-500">{t('dentalChart.left')}</span>
                 <div className="flex gap-1">
-                  {teethLayout.lower.right.map((tooth) => (
-                    <button
-                      key={tooth}
-                      onClick={() => handleToothClick(tooth)}
-                      className={`flex h-14 w-14 items-center justify-center rounded-lg border-2 text-sm font-semibold transition ${toothStatusColors[getToothStatus(tooth)]}`}
-                      title={`${t('dentalChart.tooth')} ${tooth}: ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                      aria-label={`${t('dentalChart.tooth')} ${tooth}, ${t(`dentalChart.statusOptions.${getToothStatus(tooth).replace('_', 'C').replace('root_Canal', 'rootCanal').replace('extraction_Required', 'extractionRequired')}`)}`}
-                    >
-                      {tooth}
-                    </button>
-                  ))}
+                  {teethLayout.lower.right.map(renderToothButton)}
                 </div>
                 <span className="text-xs text-gray-500">{t('dentalChart.right')}</span>
               </div>
@@ -258,6 +250,11 @@ export function DentalChart({ patientId }: DentalChartProps) {
           <Modal
             open={editOpen}
             title={`${t('dentalChart.tooth')} ${selectedTooth.tooth_number}`}
+            description={
+              selectedTooth.updated_at
+                ? `${t('dentalChart.lastUpdated')}: ${formatDateTime(selectedTooth.updated_at)}`
+                : undefined
+            }
             fields={editFields(t)}
             onOpenChange={(open) => {
               setEditOpen(open);
@@ -275,3 +272,4 @@ export function DentalChart({ patientId }: DentalChartProps) {
     </Card>
   );
 }
+
