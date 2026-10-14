@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "wrangler pages dev --port 8788",
-    "dev:full": "wrangler pages dev -- npm run dev",
+    "dev:full": "node scripts/dev.mjs",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
     "lint": "oxlint",
