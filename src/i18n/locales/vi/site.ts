@@ -1,4 +1,4 @@
-const phase9 = {
+const site = {
   meta: {
     homeTitle: 'Nha Khoa Thịnh Hưng | Chăm sóc nha khoa tận tâm',
     homeDescription:
@@ -23,4 +23,4 @@ const phase9 = {
   },
 };
 
-export default phase9;
+export default site;
