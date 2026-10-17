@@ -43,7 +43,7 @@ Key scripts (`package.json`):
 functions/
   api/[[route]].ts        Single Hono app mounted at basePath '/api'; all routes defined here.
   lib/
-    db.ts                 Env type (DB: D1Database, JWT_SECRET: string, DOCUMENTS: R2Bucket).
+    db.ts                 Env type (DB: D1Database, JWT_SECRET: string, DOCUMENTS: R2Bucket, TELEGRAM_BOT_TOKEN?: string, TELEGRAM_CHAT_ID?: string).
     auth.ts               JWT session cookie creation/verification, requireAuth, requireRole middleware.
     password.ts            PBKDF2 hash/verify helpers.
     validation.ts          zod schemas + parseJsonBody helper for all API input. Includes document validation.
@@ -57,6 +57,7 @@ functions/
     dental-chart.service.ts Tooth-level status mapping, 32 permanent teeth synthesis, and status updates.
     notification.service.ts Persistent notification CRUD, read/unread state, dedupe, retention cleanup.
     document.service.ts     Document upload/download/delete, R2 and D1 operations.
+    telegram.service.ts     Telegram Bot API client: HTML-escaped message builder, sendMessage with 4 s timeout, and best-effort safe wrapper for appointment-request notifications.
 
 migrations/
   0001_init.sql                        Base schema (users.email/name, patients.dob, appointments.start_time/end_time).
@@ -263,6 +264,12 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
   - Notification bell dropdown with unread badge and recent feed.
   - Dedicated `/notifications` page with all/unread filter and pagination.
   - EN/VI localized notification titles/messages rendered at presentation time from language-neutral notification types + metadata.
+- Phase 8.1 Telegram notifications (COMPLETE):
+  - `functions/services/telegram.service.ts` — zero-dependency Telegram Bot API client using native `fetch`, HTML-safe message builder, 4 s `AbortSignal.timeout`, and `sendAppointmentRequestNotificationSafely` fire-and-forget wrapper.
+  - Fires after D1 insert and in-app notifications in `POST /api/public/appointment-requests`. Any failure is caught, logged, and never surfaced to the customer or the HTTP 201 response.
+  - Configured via optional `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars; silently skips when either is absent.
+  - Bilingual (VI/EN) message with: reference ID, patient name, phone, preferred date/time, service, requested doctor, and truncated note (≤150 chars). No medical records or clinical data.
+  - Full unit test suite in `functions/services/telegram.service.test.ts` (21 tests: formatting, HTML escaping, API success/failure, missing config, timeout/network abort).
 - Audit logging for auth, patient, note, appointment, and user-creation actions.
 - Basic responsive app shell (collapsible sidebar nav) for the management system.
 - Public Phase 1 landing page with static marketing data, responsive public layout, EN/VI copy,
@@ -385,6 +392,7 @@ via `logAudit`. Errors are centralized in `app.onError` (logs, returns generic 5
 - Production deployment is not fully ready yet due to manual prerequisites.
 - Production secret setup cannot be verified from repository-only evidence:
   - `JWT_SECRET` must be present in Cloudflare Pages production secrets.
+  - `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are optional; when set they enable Telegram appointment-request notifications. Configure via Cloudflare Dashboard or `npx wrangler pages secret put TELEGRAM_BOT_TOKEN` / `npx wrangler pages secret put TELEGRAM_CHAT_ID`. See `.dev.vars.example` for local setup instructions.
 - Production R2 posture cannot be proven from repository-only evidence:
   - Bucket `my-dental-app-documents` must exist and be private in the production account.
 - Backup/recovery automation is not implemented in this repository:

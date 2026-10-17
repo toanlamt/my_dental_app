@@ -117,9 +117,10 @@ export async function updateAppointment(
   const nextDoctorId = input.doctorId ?? current.doctor_id;
   const nextStart = input.startTime ?? current.start_at;
   const nextEnd = input.endTime ?? current.end_at;
-  const isRescheduling = input.doctorId || input.startTime || input.endTime;
+  const isRescheduling = Boolean(input.doctorId || input.startTime || input.endTime);
+  const isRestoring = current.status === 'cancelled' && input.status !== undefined && input.status !== 'cancelled';
 
-  if (isRescheduling && (await hasConflict(db, nextDoctorId, nextStart, nextEnd, id))) {
+  if ((isRescheduling || isRestoring) && (await hasConflict(db, nextDoctorId, nextStart, nextEnd, id))) {
     throw new AppointmentConflictError();
   }
 

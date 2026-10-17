@@ -71,4 +71,59 @@ describe('Appointment Service', () => {
       expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('status = ?'));
     });
   });
+
+  describe('updateAppointment', () => {
+    it('should check conflicts and throw if slot is occupied when restoring a cancelled appointment', async () => {
+      const mockDb = createMockDb();
+      const stmt = mockDb.prepare('dummy');
+      // 1. getAppointmentById returns cancelled appointment
+      (stmt.first as any)
+        .mockResolvedValueOnce({
+          id: '123',
+          patient_id: 'p1',
+          doctor_id: 'd1',
+          start_at: '2026-10-02T10:00:00Z',
+          end_at: '2026-10-02T11:00:00Z',
+          status: 'cancelled',
+        })
+        // 2. hasConflict finds another appointment in that slot
+        .mockResolvedValueOnce({ id: 'conflicting-id' });
+
+      const { updateAppointment } = await import('./appointment.service');
+      await expect(
+        updateAppointment(mockDb, '123', { status: 'scheduled' }),
+      ).rejects.toThrow(AppointmentConflictError);
+    });
+
+    it('should successfully restore a cancelled appointment when no conflict exists', async () => {
+      const mockDb = createMockDb();
+      const stmt = mockDb.prepare('dummy');
+      (stmt.first as any)
+        // 1. getAppointmentById returns cancelled appointment
+        .mockResolvedValueOnce({
+          id: '123',
+          patient_id: 'p1',
+          doctor_id: 'd1',
+          start_at: '2026-10-02T10:00:00Z',
+          end_at: '2026-10-02T11:00:00Z',
+          status: 'cancelled',
+        })
+        // 2. hasConflict returns null (no conflict)
+        .mockResolvedValueOnce(null)
+        // 3. getAppointmentById after update
+        .mockResolvedValueOnce({
+          id: '123',
+          patient_id: 'p1',
+          doctor_id: 'd1',
+          start_at: '2026-10-02T10:00:00Z',
+          end_at: '2026-10-02T11:00:00Z',
+          status: 'scheduled',
+        });
+
+      const { updateAppointment } = await import('./appointment.service');
+      const updated = await updateAppointment(mockDb, '123', { status: 'scheduled' });
+      expect(updated?.status).toBe('scheduled');
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE appointments SET'));
+    });
+  });
 });

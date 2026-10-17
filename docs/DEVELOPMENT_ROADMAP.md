@@ -164,6 +164,37 @@ pass and the feature actually works), not merely implemented. See
   - Isolated notification failures from primary business flows (best-effort creation; no hard dependency on notification insert success).
   - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only), `npm run build` PASS, `npm run test` runnable with initial tests.
 
+## Phase 8.1 — Telegram notifications
+- **Objective**: Send a real-time Telegram message to the clinic's configured Telegram account or
+  group whenever a customer submits a public appointment request.
+- **Scope**: Backend-only extension to the existing `POST /api/public/appointment-requests` route.
+  No new migrations, no frontend changes, no new external dependencies.
+- **Acceptance criteria**:
+  - A Telegram message is sent when a request is saved and credentials are configured.
+  - Telegram failure does not affect the D1 write or the HTTP 201 response returned to the customer.
+  - Missing/empty credentials cause a silent info-level log; no error thrown.
+  - Message content includes only minimum operational data (ref ID, name, phone, date/time, service,
+    doctor, note ≤ 150 chars). No medical records, clinical history, or credentials are sent.
+  - Sensitive tokens are never committed to Git or exposed to the frontend.
+  - `npm run typecheck`, `npm run lint`, `npm run test` all pass.
+- **Isolation requirements**: Must not modify or regress any in-app notification, appointment-request,
+  or booking behavior. Telegram is additive only.
+- **Status**: `DONE` — implemented and verified (2026-10-17):
+  - `functions/services/telegram.service.ts` — zero-dependency Telegram Bot API client using native
+    `fetch`, `parse_mode: 'HTML'`, HTML escaping for all dynamic values, 4 s `AbortSignal.timeout`,
+    and `sendAppointmentRequestNotificationSafely` fire-and-forget wrapper matching the existing
+    `createNotificationsSafely` pattern.
+  - `functions/lib/db.ts` — `Env` extended with optional `TELEGRAM_BOT_TOKEN?: string` and
+    `TELEGRAM_CHAT_ID?: string`; optional typing preserves local dev without credentials.
+  - `functions/api/[[route]].ts` — Telegram safe call wired after in-app notifications in
+    `POST /public/appointment-requests`, with doctor name resolved from the already-validated `doctor_id`.
+  - `.dev.vars.example` — setup instructions for local development and production secrets.
+  - `functions/services/telegram.service.test.ts` — 21-test suite covering: message content,
+    HTML escaping, note truncation, missing credentials (skip), API ok=false (throw → caught by safe
+    wrapper), `AbortError` timeout, network failure. All pre-existing 26 tests continue to pass.
+  - Verification: `npm run typecheck` PASS, `npm run lint` PASS (warnings only), `npm run build` PASS,
+    `npm run test` PASS (47 tests, 8 test files, exit code 0).
+
 ## Phase 9 — SEO / accessibility / performance
 - **Objective**: Make the public site SEO-friendly, accessible (WCAG), and performant.
 - **Scope**: Meta tags/structured data, semantic HTML/ARIA audit, image optimization, bundle

@@ -174,6 +174,10 @@ export function CalendarPageV2() {
       setSelected(null);
       load();
     } catch (err) {
+      if (err instanceof Error && err.message.includes('Doctor already has an appointment')) {
+        setError(t('appointmentRequests.conflict'));
+        return;
+      }
       setError(err instanceof Error ? err.message : t('errors.requestFailed'));
     }
   };
@@ -190,9 +194,17 @@ export function CalendarPageV2() {
     }
 
     try {
+      const payload: Record<string, unknown> = {
+        ...values,
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
+      };
+      if (selected.status === 'cancelled') {
+        payload.status = 'scheduled';
+      }
       await apiRequest(`/api/appointments/${selected.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ ...values, start_at: start.toISOString(), end_at: end.toISOString() }),
+        body: JSON.stringify(payload),
       });
       setEditOpen(false);
       setSelected(null);
@@ -360,17 +372,27 @@ export function CalendarPageV2() {
               ) : canAddClinicalRecord(user?.role) ? (
                 <Link to={`/patients/${selected.patient_id}?tab=medicalRecords&appointmentId=${selected.id}`}><Button size="sm" variant="outline"><Plus size={14} />{t('medicalRecords.create')}</Button></Link>
               ) : null}
-              {canEdit && selected.status !== 'cancelled' && (
+              {canEdit && (
                 <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
                   <Edit3 size={14} />
                   {t('appointments.edit')}
                 </Button>
               )}
-              {['confirmed', 'completed', 'no_show', 'cancelled'].map((status) => (
-                <Button key={status} size="sm" variant={status === 'cancelled' ? 'danger' : 'outline'} onClick={() => updateStatus(status)}>
-                  {t(`appointments.status.${status}`)}
-                </Button>
-              ))}
+              {selected.status === 'completed' ? null : selected.status === 'cancelled' ? (
+                canEdit && (
+                  <Button size="sm" variant="outline" onClick={() => updateStatus('scheduled')}>
+                    {t('appointments.restore')}
+                  </Button>
+                )
+              ) : (
+                ['confirmed', 'completed', 'no_show', 'cancelled']
+                  .filter((status) => status !== selected.status)
+                  .map((status) => (
+                    <Button key={status} size="sm" variant={status === 'cancelled' ? 'danger' : 'outline'} onClick={() => updateStatus(status)}>
+                      {t(`appointments.status.${status}`)}
+                    </Button>
+                  ))
+              )}
               <Button size="sm" variant="ghost" onClick={() => setSelected(null)}>
                 {t('navigation.close')}
               </Button>

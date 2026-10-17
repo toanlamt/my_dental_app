@@ -30,6 +30,7 @@ import * as appointmentRequestService from '../services/appointment-request.serv
 import * as medicalRecordService from '../services/medical-record.service';
 import * as dentalChartService from '../services/dental-chart.service';
 import * as documentService from '../services/document.service';
+import * as telegramService from '../services/telegram.service';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>().basePath('/api');
 
@@ -161,6 +162,15 @@ app.post('/public/appointment-requests', async (c) => {
         dedupeKey: `appointment_request_created:${request.id}`,
       })),
     );
+
+    // Telegram — secondary, best-effort notification channel.
+    // Resolves the doctor name for message context (already validated above).
+    // Any Telegram failure is caught inside the safe wrapper and never
+    // surfaces to the customer or changes the HTTP 201 response.
+    const doctorName = parsed.doctor_id
+      ? (await userService.findUserById(c.env.DB, parsed.doctor_id))?.full_name ?? null
+      : null;
+    await telegramService.sendAppointmentRequestNotificationSafely(c.env, request, doctorName);
 
     return c.json({ request: { id: request.id, status: request.status, created_at: request.created_at } }, 201);
   } catch (err) {
@@ -721,7 +731,7 @@ app.patch('/appointments/:id', requireAuth, requireRole('admin', 'staff', 'docto
   if (
     parsed.status &&
     parsed.status !== existing.status &&
-    (existing.status === 'completed' || existing.status === 'cancelled')
+    existing.status === 'completed'
   ) {
     return c.json({ error: `Cannot change status from ${existing.status}` }, 409);
   }
@@ -730,13 +740,17 @@ app.patch('/appointments/:id', requireAuth, requireRole('admin', 'staff', 'docto
   const nextEnd = parsed.end_at ?? existing.end_at;
   if (new Date(nextEnd) <= new Date(nextStart)) return c.json({ error: 'end_at must be after start_at' }, 400);
 
-  // Doctors may only update the status of their own appointments (e.g. complete/no-show).
+  // Doctors may only update the status of their own appointments (e.g. complete/no-show),
+  // and cannot reactivate cancelled appointments.
   if (user.role === 'doctor') {
     if (existing.doctor_id !== user.id) {
       return c.json({ error: 'Appointment not found' }, 404);
     }
     if (parsed.doctor_id || parsed.start_at || parsed.end_at) {
       return c.json({ error: 'Doctors may only update appointment status' }, 403);
+    }
+    if (existing.status === 'cancelled') {
+      return c.json({ error: 'Cannot update cancelled appointment' }, 403);
     }
   }
 

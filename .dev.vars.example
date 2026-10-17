@@ -13,3 +13,24 @@ JWT_SECRET="replace-with-a-long-random-local-dev-secret"
 #   - CRITICAL: Ensure R2 bucket is created and permissions are correct
 #   - Ensure JWT_SECRET is set as a Cloudflare secret (not in .dev.vars)
 
+# ---------------------------------------------------------------------------
+# Telegram Notifications (optional)
+# ---------------------------------------------------------------------------
+# When set, a Telegram message is sent to the configured chat/channel/group
+# each time a new public appointment request is submitted.
+#
+# To obtain these values:
+#   1. Create a Telegram bot via @BotFather → copy the token it provides.
+#   2. Add the bot to your clinic's Telegram channel or group (and make it an admin
+#      so it can post messages), then send a test message, then fetch:
+#      https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
+#      and copy the numeric chat ID (negative for groups/channels, e.g. -100123456789).
+#   3. Paste the values below for local testing.
+#
+# For production: set via Cloudflare Dashboard or:
+#   npx wrangler pages secret put TELEGRAM_BOT_TOKEN
+#   npx wrangler pages secret put TELEGRAM_CHAT_ID
+#
+# Leave blank (or omit) to disable Telegram notifications entirely.
+TELEGRAM_BOT_TOKEN=""
+TELEGRAM_CHAT_ID=""
