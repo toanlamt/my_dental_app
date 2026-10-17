@@ -16,11 +16,13 @@ export async function listAppointments(db: Env['DB'], params: ListAppointmentsPa
   const conditions: string[] = [];
   const values: unknown[] = [];
 
-  if (params.from) {
-    conditions.push('start_at >= ?');
+  if (params.from && params.to) {
+    conditions.push('start_at < ? AND end_at > ?');
+    values.push(params.to, params.from);
+  } else if (params.from) {
+    conditions.push('end_at >= ?');
     values.push(params.from);
-  }
-  if (params.to) {
+  } else if (params.to) {
     conditions.push('start_at <= ?');
     values.push(params.to);
   }
@@ -54,9 +56,9 @@ async function hasConflict(
   excludeId?: string,
 ): Promise<boolean> {
   const query = excludeId
-    ? `SELECT id FROM appointments WHERE doctor_id = ? AND status != 'cancelled' AND id != ?
+    ? `SELECT id FROM appointments WHERE doctor_id = ? AND status NOT IN ('cancelled', 'completed', 'no_show') AND id != ?
        AND start_at < ? AND end_at > ? LIMIT 1`
-    : `SELECT id FROM appointments WHERE doctor_id = ? AND status != 'cancelled'
+    : `SELECT id FROM appointments WHERE doctor_id = ? AND status NOT IN ('cancelled', 'completed', 'no_show')
        AND start_at < ? AND end_at > ? LIMIT 1`;
   const bindValues = excludeId
     ? [doctorId, excludeId, endTime, startTime]

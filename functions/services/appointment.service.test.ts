@@ -55,6 +55,9 @@ describe('Appointment Service', () => {
         endTime: '2026-10-02T11:00:00Z',
         createdBy: 'admin'
       })).rejects.toThrow(AppointmentConflictError);
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        expect.stringContaining("status NOT IN ('cancelled', 'completed', 'no_show')"),
+      );
     });
   });
 
