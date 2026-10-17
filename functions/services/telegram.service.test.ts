@@ -4,6 +4,7 @@ import {
   buildAppointmentRequestMessage,
   sendAppointmentRequestNotification,
   sendAppointmentRequestNotificationSafely,
+  buildAppointmentCreatedMessage,
 } from './telegram.service';
 import type { AppointmentRequest } from '../lib/types';
 
@@ -265,6 +266,59 @@ describe('sendAppointmentRequestNotificationSafely', () => {
         { TELEGRAM_BOT_TOKEN: 'token', TELEGRAM_CHAT_ID: '-123' },
         makeMockRequest({ message: 'Test note' }),
         'Dr. Lê Văn C',
+      ),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe('buildAppointmentCreatedMessage', () => {
+  const mockAppointment = {
+    id: 'apt-123',
+    patient_id: 'p1',
+    doctor_id: 'd1',
+    start_at: '2026-10-18T09:00:00Z',
+    end_at: '2026-10-18T10:00:00Z',
+    status: 'scheduled' as const,
+    reason: 'Routine cleaning',
+    notes: null,
+    created_at: '2026-10-17T00:00:00Z',
+    updated_at: '2026-10-17T00:00:00Z',
+  };
+
+  it('includes core appointment details and escapes HTML', () => {
+    const msg = buildAppointmentCreatedMessage(mockAppointment, 'Nguyễn <Van> A', 'Dr. B', '0901234567');
+    expect(msg).toContain('apt-123');
+    expect(msg).toContain('Nguyễn &lt;Van&gt; A');
+    expect(msg).toContain('Dr. B');
+    expect(msg).toContain('0901234567');
+    expect(msg).toContain('Routine cleaning');
+  });
+});
+
+describe('sendAppointmentCreatedNotificationSafely', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('skips silently when secrets are missing', async () => {
+    const { sendAppointmentCreatedNotificationSafely } = await import('./telegram.service');
+    await expect(
+      sendAppointmentCreatedNotificationSafely(
+        {},
+        { id: '1', patient_id: 'p', doctor_id: 'd', start_at: 'a', end_at: 'b', status: 'scheduled', reason: null, notes: null, created_at: '', updated_at: '' },
+        'Patient',
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it('handles network error safely without throwing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    const { sendAppointmentCreatedNotificationSafely } = await import('./telegram.service');
+    await expect(
+      sendAppointmentCreatedNotificationSafely(
+        { TELEGRAM_BOT_TOKEN: 'token', TELEGRAM_CHAT_ID: 'chat' },
+        { id: '1', patient_id: 'p', doctor_id: 'd', start_at: 'a', end_at: 'b', status: 'scheduled', reason: null, notes: null, created_at: '', updated_at: '' },
+        'Patient',
       ),
     ).resolves.toBeUndefined();
   });

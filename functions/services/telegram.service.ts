@@ -1,5 +1,5 @@
 import type { Env } from '../lib/db';
-import type { AppointmentRequest } from '../lib/types';
+import type { Appointment, AppointmentRequest } from '../lib/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -100,6 +100,45 @@ export function buildAppointmentRequestMessage(request: AppointmentRequest, doct
   return lines.join('\n');
 }
 
+export function buildAppointmentCreatedMessage(
+  appointment: Appointment,
+  patientName: string,
+  doctorName?: string | null,
+  phone?: string | null,
+): string {
+  const lines: string[] = [
+    '🦷 <b>Lịch hẹn mới đã được tạo / New Appointment Scheduled</b>',
+    '',
+    `📋 <b>Mã lịch hẹn:</b> <code>${escapeHtml(appointment.id)}</code>`,
+    `👤 <b>Bệnh nhân / Patient:</b> ${escapeHtml(patientName)}`,
+  ];
+
+  if (phone) {
+    lines.push(`📞 <b>Số điện thoại / Phone:</b> ${escapeHtml(phone)}`);
+  }
+
+  lines.push(
+    `📅 <b>Thời gian bắt đầu / Start:</b> ${escapeHtml(appointment.start_at)}`,
+    `🕐 <b>Thời gian kết thúc / End:</b> ${escapeHtml(appointment.end_at)}`,
+  );
+
+  if (doctorName) {
+    lines.push(`👨‍⚕️ <b>Bác sĩ / Doctor:</b> ${escapeHtml(doctorName)}`);
+  }
+
+  if (appointment.reason) {
+    const truncated = appointment.reason.length > 150
+      ? `${appointment.reason.slice(0, 150)}…`
+      : appointment.reason;
+    lines.push(`💬 <b>Lý do khám / Reason:</b> ${escapeHtml(truncated)}`);
+  }
+
+  lines.push('');
+  lines.push('👉 <i>Vui lòng xem chi tiết trong lịch phòng khám / Please view in clinic calendar.</i>');
+
+  return lines.join('\n');
+}
+
 // ---------------------------------------------------------------------------
 // Public API — safe wrappers
 // ---------------------------------------------------------------------------
@@ -149,5 +188,44 @@ export async function sendAppointmentRequestNotificationSafely(
     await sendAppointmentRequestNotification(env, request, doctorName);
   } catch (err) {
     console.error('[telegram] Failed to send appointment request notification:', err);
+  }
+}
+
+export async function sendAppointmentCreatedNotification(
+  env: Pick<Env, 'TELEGRAM_BOT_TOKEN' | 'TELEGRAM_CHAT_ID'>,
+  appointment: Appointment,
+  patientName: string,
+  doctorName?: string | null,
+  phone?: string | null,
+): Promise<void> {
+  const token = env.TELEGRAM_BOT_TOKEN;
+  const chatId = env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    console.info('[telegram] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured — skipping notification');
+    return;
+  }
+
+  const message = buildAppointmentCreatedMessage(appointment, patientName, doctorName, phone);
+  const result = await sendTelegramMessage(token, chatId, message);
+
+  if (!result.ok) {
+    throw new Error(
+      `Telegram API returned ok=false: ${result.description ?? 'unknown error'} (code=${result.error_code ?? '?'})`,
+    );
+  }
+}
+
+export async function sendAppointmentCreatedNotificationSafely(
+  env: Pick<Env, 'TELEGRAM_BOT_TOKEN' | 'TELEGRAM_CHAT_ID'>,
+  appointment: Appointment,
+  patientName: string,
+  doctorName?: string | null,
+  phone?: string | null,
+): Promise<void> {
+  try {
+    await sendAppointmentCreatedNotification(env, appointment, patientName, doctorName, phone);
+  } catch (err) {
+    console.error('[telegram] Failed to send appointment created notification:', err);
   }
 }

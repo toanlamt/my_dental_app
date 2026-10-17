@@ -226,6 +226,13 @@ app.post('/appointment-requests/:id/convert', requireAuth, requireRole('admin', 
     const converted = await appointmentRequestService.markAppointmentRequestConverted(c.env.DB, request.id, appointment.id, user.id);
     await logAudit(c.env.DB, { userId: user.id, action: 'appointment_request.converted', entityType: 'appointment_request', entityId: request.id, details: { appointmentId: appointment.id } });
     await logAudit(c.env.DB, { userId: user.id, action: 'appointment.created_from_request', entityType: 'appointment', entityId: appointment.id });
+    await telegramService.sendAppointmentCreatedNotificationSafely(
+      c.env,
+      appointment,
+      patient.full_name,
+      doctor.full_name,
+      patient.phone,
+    );
     return c.json({ request: converted, appointment }, 201);
   } catch (err) {
     if (err instanceof appointmentService.AppointmentConflictError) return c.json({ error: 'Doctor already has an appointment in this time range' }, 409);
@@ -710,6 +717,15 @@ app.post('/appointments', requireAuth, requireRole('admin', 'staff'), async (c) 
       entityType: 'appointment',
       entityId: appointment.id,
     });
+    const patient = await patientService.getPatientById(c.env.DB, parsed.patient_id);
+    const doctor = await userService.findUserById(c.env.DB, parsed.doctor_id);
+    await telegramService.sendAppointmentCreatedNotificationSafely(
+      c.env,
+      appointment,
+      patient?.full_name ?? 'Bệnh nhân',
+      doctor?.full_name ?? null,
+      patient?.phone ?? null,
+    );
     return c.json({ appointment }, 201);
   } catch (err) {
     if (err instanceof appointmentService.AppointmentConflictError) {
